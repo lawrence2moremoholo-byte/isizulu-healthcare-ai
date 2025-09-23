@@ -3,125 +3,87 @@ import os
 
 app = Flask(__name__)
 
-# Conversation state tracking
+# Store conversations and bookings
 conversation_states = {}
 current_days = {}
+all_bookings = []
 
 def notify_clinic(patient_phone, day, time):
-    """Send WhatsApp notification to clinic staff"""
-    clinic_number = "+2767..."  # You'll set this per client
-    
-    notification_msg = f"📋 NEW APPOINTMENT:\nPatient: {patient_phone}\nDay: {day}\nTime: {time}:00\n\nView all: https://isizulu-healthcare-ai.onrender.com/clinic"
-    
-    # In production, you'd send via Twilio API
-    # For now, we'll print it (you'll see in Render logs)
-    print(f"CLINIC NOTIFICATION: {notification_msg}")
-    return notification_msg
+    """TODO: Actually send WhatsApp/email to clinic"""
+    booking_msg = f"NEW BOOKING: {patient_phone} on {day} at {time}:00"
+    print(f"CLINIC SHOULD GET: {booking_msg}")
+    all_bookings.append({"patient": patient_phone, "day": day, "time": time})
+    return booking_msg
 
 def process_message(message, phone_number):
-    # Get or create conversation state for this user
     if phone_number not in conversation_states:
         conversation_states[phone_number] = "GREETING"
     
-    current_state = conversation_states[phone_number]
-    message_lower = message.lower()
+    state = conversation_states[phone_number]
+    msg_lower = message.lower()
     
-    # State machine
-    if current_state == "GREETING":
+    if state == "GREETING":
         conversation_states[phone_number] = "ASKING_DAY"
-        return "Sawubona! 🏥 Ufuna ukubona udokotela? Yebo cha?"
+        return "Sawubona! 🏥 Ufuna ukubona udokotela? Yebo noma Cha?"
     
-    elif current_state == "ASKING_DAY":
-        if 'yebo' in message_lower or 'yes' in message_lower:
+    elif state == "ASKING_DAY":
+        if 'yebo' in msg_lower:
             conversation_states[phone_number] = "CHOOSING_DAY"
-            return "Kuhle! Ufuna usuku luni? (Msombuluko, Lwesibili, Lwesithathu, Lwesine, Lwesihlanu, Mgqibelo)"
+            return "Kuhle! Ufuna usuku luni? (Msombuluko, Lwesibili, Lwesithathu...)"
         else:
             conversation_states[phone_number] = "GREETING"
             return "Ngiyaxolisa! Ngingakusiza ngani?"
     
-    elif current_state == "CHOOSING_DAY":
-        day_keywords = {
-            'msombuluko': 'Msombuluko', 'lwesibili': 'Lwesibili', 
-            'lwesithathu': 'Lwesithathu', 'lwesine': 'Lwesine',
-            'lwesihlanu': 'Lwesihlanu', 'mgqibelo': 'Mgqibelo'
-        }
-        
-        for keyword, day in day_keywords.items():
-            if keyword in message_lower:
+    elif state == "CHOOSING_DAY":
+        days = {'msombuluko': 'Msombuluko', 'lwesibili': 'Lwesibili', 'lwesithathu': 'Lwesithathu'}
+        for kw, day in days.items():
+            if kw in msg_lower:
                 conversation_states[phone_number] = "CHOOSING_TIME"
-                current_days[phone_number] = day  # Store selected day
-                return f"Kuhle! Ukhethe u-{day}. Ufuna isikhathi sini? (8, 9, 10, 2, 3)"
-        
-        return "Angikwazi usuku. Sicela uthi: Msombuluko, Lwesibili, Lwesithathu, njll."
+                current_days[phone_number] = day
+                return f"Kuhle! Ukhethe u-{day}. Ukhetha isikhathi sini? (8am, 9am, 10am, 2pm, 3pm)"
+        return "Angikwazi usuku. Msombuluko, Lwesibili, Lwesithathu?"
     
-    elif current_state == "CHOOSING_TIME":
-        if any(word in message_lower for word in ['8', '9', '10', '2', '3']):
-            selected_time = ''.join([char for char in message_lower if char in '891023'])
-            current_day = current_days.get(phone_number, "Unknown")
-            
-            # NOTIFY CLINIC
-            clinic_msg = notify_clinic(phone_number, current_day, selected_time)
-            
+    elif state == "CHOOSING_TIME":
+        if any(t in msg_lower for t in ['8am', '9am', '10am', '2pm', '3pm']):
+            time = ''.join([c for c in msg_lower if c in '891023'])
+            day = current_days.get(phone_number, "Unknown")
+            notify_clinic(phone_number, day, time)  # Store booking
             conversation_states[phone_number] = "COMPLETE"
-            return f"Perfect! 🎉 Isikhathi sakho sihleliwe ngo {selected_time}:00. Sizohamba kahle!"
-        else:
-            return "Sicela unikeze isikhathi: 8, 9, 10, 2, noma 3"
+            return f"Perfect! 🎉 Isikhathi sakho {time}:00 sihleliwe. Suzohamba kahle!"
+        return "Sicela isikhathi: 8am, 9am, 10am, 2pm, noma 3pm"
     
     else:
         conversation_states[phone_number] = "GREETING"
-        return "Sawubona! Ngingakusiza kanjani ngokubuka udokotela?"
+        return "Sawubona! Ngingakusiza kanjani?"
 
 @app.route('/')
 def home():
-    return "🏥 IsiZulu Healthcare AI is LIVE!"
+    return "🏥 IsiZulu Healthcare AI LIVE"
 
 @app.route('/health')
 def health_check():
-    return jsonify({"status": "healthy", "service": "isizulu_healthcare"})
+    return jsonify({"status": "healthy"})
 
-# Clinic Dashboard
 @app.route('/clinic')
 def clinic_dashboard():
-    dashboard_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Clinic Appointments</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            .appointment { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; }
-            .today { background-color: #f0fff0; }
-        </style>
-    </head>
-    <body>
-        <h1>🏥 Clinic Appointments Dashboard</h1>
-        <h3>Today's Bookings</h3>
-        <div id="bookings">
-            <div class="appointment today">
-                <strong>Patient:</strong> +27XXX XXX XXX<br>
-                <strong>Day:</strong> Monday<br>
-                <strong>Time:</strong> 9:00
-            </div>
-        </div>
-        <p><em>Live booking updates will appear here automatically.</em></p>
-        <p>Share this link with clinic staff: https://isizulu-healthcare-ai.onrender.com/clinic</p>
-    </body>
-    </html>
+    bookings_html = "".join([f"<div>{b['patient']} - {b['day']} {b['time']}:00</div>" for b in all_bookings])
+    return f"""
+    <html><body>
+        <h1>🏥 Clinic Dashboard</h1>
+        <h3>All Bookings:</h3>
+        {bookings_html if bookings_html else "No bookings yet"}
+    </body></html>
     """
-    return dashboard_html
 
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
     try:
-        incoming_msg = request.values.get('Body', '').strip()
-        from_number = request.values.get('From', '')
-        
-        response_text = process_message(incoming_msg, from_number)
-        
-        return f'<Response><Message>{response_text}</Message></Response>'
-        
-    except Exception as e:
-        return f'<Response><Message>Ngiyaxolisa, iphutha lifikile.</Message></Response>'
+        msg = request.values.get('Body', '').strip()
+        from_num = request.values.get('From', '')
+        response = process_message(msg, from_num)
+        return f'<Response><Message>{response}</Message></Response>'
+    except:
+        return '<Response><Message>Error. Try again.</Message></Response>'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
