@@ -17,7 +17,7 @@ def whatsapp_webhook():
         incoming_msg = request.values.get('Body', '').strip()
         from_number = request.values.get('From', '')
         
-        print(f"Received: {incoming_msg}")
+        print("Received: " + str(incoming_msg))
         
         response_text = process_message(incoming_msg)
         
