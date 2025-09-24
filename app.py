@@ -237,7 +237,7 @@ def detect_language_simple(text):
         'isizulu': ['sawubona', 'yebo', 'cha', 'ngiyabonga', 'isikhathi'],
         'isixhosa': ['molo', 'ewe', 'hayi', 'enkosi', 'ixesha'],
         'afrikaans': ['hallo', 'ja', 'nee', 'dankie', 'afspraak'],
-        'sesotho': ['lumela', 'ee', 'che', 'kea leboha', 'nako'],
+        'sesotho': ['dumela', 'ee', 'che', 'kea leboha', 'nako'],
         'setswana': ['dumela', 'ee', 'nnyaa', 'ke a leboga', 'nako'],
         'sepedi': ['dumela', 'ee', 'aowa', 'ke a leboga', 'nako'],
         'xitsonga': ['avuxeni', 'ina', 'e-e', 'ndza nkhensa', 'nkarhi'],
