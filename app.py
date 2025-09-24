@@ -4,8 +4,6 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 from twilio.rest import Client
-from googletrans import Translator
-from langdetect import detect
 
 app = Flask(__name__)
 
@@ -29,213 +27,248 @@ CLINIC_HOURS = {
 MAX_ADVANCE_DAYS = 3
 MAX_DAILY_SLOTS = 5
 
-# COMPLETE 11 South African Languages Day Mapping
-DAY_TRANSLATIONS = {
+# COMPLETE 11 South African Languages - NO EXTERNAL DEPENDENCIES
+LANGUAGE_CONFIG = {
     'english': {
-        'Monday': 'Monday', 'Tuesday': 'Tuesday', 'Wednesday': 'Wednesday',
-        'Thursday': 'Thursday', 'Friday': 'Friday', 'Saturday': 'Saturday', 'Sunday': 'Sunday'
+        'code': 'en',
+        'name': 'English',
+        'days': {
+            'Monday': 'Monday', 'Tuesday': 'Tuesday', 'Wednesday': 'Wednesday',
+            'Thursday': 'Thursday', 'Friday': 'Friday', 'Saturday': 'Saturday', 'Sunday': 'Sunday'
+        },
+        'responses': {
+            'welcome': "Welcome to MetaWell AI Clinic! Choose language: 1.English 2.isZulu 3.isXhosa 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Hello! Book medical appointment? (Yes/No)",
+            'show_days': "Available days: {days}. Which day?",
+            'choose_day': "Great! You chose {day}. Checking times...",
+            'show_slots': "Times on {day}: {slots}. Which time?",
+            'booking_success': "✅ Confirmed! {day} at {time}. SMS sent!",
+            'goodbye': "Thank you! Goodbye!",
+            'yes': ['yes', 'y'], 'no': ['no', 'n']
+        }
     },
     'isizulu': {
-        'Monday': 'Msombuluko', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu',
-        'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Sonto'
+        'code': 'zu',
+        'name': 'isiZulu',
+        'days': {
+            'Monday': 'Msombuluko', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu',
+            'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Sonto'
+        },
+        'responses': {
+            'welcome': "Uyemukelwa ku-MetaWell AI! Khetha ulimi: 1.isZulu 2.English 3.isXhosa 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Sawubona! Bhuka isikhathi? (Yebo/Cha)",
+            'show_days': "Izinsuku: {days}. Usuku luni?",
+            'choose_day': "Kuhle! U-{day}. Ngibheka izikhathi...",
+            'show_slots': "Izikhathi ku-{day}: {slots}. Isikhathi sini?",
+            'booking_success': "✅ Siqinisekisiwe! {day} nge-{time}. SMS ithunyelwe!",
+            'goodbye': "Ngiyabonga! Sala kahle!",
+            'yes': ['yebo', 'y'], 'no': ['cha', 'c']
+        }
     },
     'isixhosa': {
-        'Monday': 'Mvulo', 'Tuesday': 'Lwesibini', 'Wednesday': 'Lwesithathu',
-        'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Cawe'
+        'code': 'xh',
+        'name': 'isiXhosa',
+        'days': {
+            'Monday': 'Mvulo', 'Tuesday': 'Lwesibini', 'Wednesday': 'Lwesithathu',
+            'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Cawe'
+        },
+        'responses': {
+            'welcome': "Wamkelekile kwi-MetaWell AI! Khetha ulwimi: 1.isXhosa 2.English 3.isZulu 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Molo! Bhukisha i-appointment? (Ewe/Hayi)",
+            'show_days': "Iintsuku: {days}. Usuku luni?",
+            'choose_day': "Kulungile! U-{day}. Ndikhangela iixesha...",
+            'show_slots': "Iixesha ku-{day}: {slots}. Ixesha lini?",
+            'booking_success': "✅ Iqinisekisiwe! {day} nge-{time}. SMS ithunyelwe!",
+            'goodbye': "Enkosi! Sala kakuhle!",
+            'yes': ['ewe', 'e'], 'no': ['hayi', 'h']
+        }
     },
     'afrikaans': {
-        'Monday': 'Maandag', 'Tuesday': 'Dinsdag', 'Wednesday': 'Woensdag',
-        'Thursday': 'Donderdag', 'Friday': 'Vrydag', 'Saturday': 'Saterdag', 'Sunday': 'Sondag'
+        'code': 'af',
+        'name': 'Afrikaans',
+        'days': {
+            'Monday': 'Maandag', 'Tuesday': 'Dinsdag', 'Wednesday': 'Woensdag',
+            'Thursday': 'Donderdag', 'Friday': 'Vrydag', 'Saturday': 'Saterdag', 'Sunday': 'Sondag'
+        },
+        'responses': {
+            'welcome': "Welkom by MetaWell AI! Kies taal: 1.Afrikaans 2.English 3.isZulu 4.isXhosa 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Hallo! Maak afspraak? (Ja/Nee)",
+            'show_days': "Dae: {days}. Watter dag?",
+            'choose_day': "Goed! Jy het {day}. Gaan tye na...",
+            'show_slots': "Tye op {day}: {slots}. Watter tyd?",
+            'booking_success': "✅ Bevestig! {day} om {time}. SMS gestuur!",
+            'goodbye': "Dankie! Totsiens!",
+            'yes': ['ja', 'j'], 'no': ['nee', 'n']
+        }
     },
     'sesotho': {
-        'Monday': 'Mantaha', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
-        'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Moqebelo', 'Sunday': 'Sontaha'
+        'code': 'st',
+        'name': 'Sesotho',
+        'days': {
+            'Monday': 'Mantaha', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+            'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Moqebelo', 'Sunday': 'Sontaha'
+        },
+        'responses': {
+            'welcome': "O amohetse ho MetaWell AI! Khetha puo: 1.Sesotho 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Lumela! Behanya nako? (Ee/Che)",
+            'show_days': "Matsatsi: {days}. Letsatsi life?",
+            'choose_day': "Hantle! U {day}. Ke batla lihora...",
+            'show_slots': "Lihora ka {day}: {slots}. Nako life?",
+            'booking_success': "✅ E netefalitsoe! {day} ka {time}. SMS e rometsoe!",
+            'goodbye': "Kea leboha! Sala hantle!",
+            'yes': ['ee', 'e'], 'no': ['che', 'c']
+        }
     },
     'setswana': {
-        'Monday': 'Mosupologo', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
-        'Thursday': 'Labone', 'Friday': 'Labotlhano', 'Saturday': 'Lamatlhatso', 'Sunday': 'Tshipi'
+        'code': 'tn',
+        'name': 'Setswana',
+        'days': {
+            'Monday': 'Mosupologo', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+            'Thursday': 'Labone', 'Friday': 'Labotlhano', 'Saturday': 'Lamatlhatso', 'Sunday': 'Tshipi'
+        },
+        'responses': {
+            'welcome': "O amogetswe kwa MetaWell AI! Kgetha puo: 1.Setswana 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Dumela! Beakanya nako? (Ee/Nnyaa)",
+            'show_days': "Matsatsi: {days}. Letsatsi mang?",
+            'choose_day': "Sentle! O {day}. Ke batla dinako...",
+            'show_slots': "Dinako ka {day}: {slots}. Nako mang?",
+            'booking_success': "✅ E tshotlweetswe! {day} ka {time}. SMS e romilwe!",
+            'goodbye': "Ke a leboga! Sala sentle!",
+            'yes': ['ee', 'e'], 'no': ['nnyaa', 'n']
+        }
     },
     'sepedi': {
-        'Monday': 'Mošupologo', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
-        'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Mokibelo', 'Sunday': 'Sontaga'
+        'code': 'nso',
+        'name': 'Sepedi',
+        'days': {
+            'Monday': 'Mošupologo', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+            'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Mokibelo', 'Sunday': 'Sontaga'
+        },
+        'responses': {
+            'welcome': "O amogetšwe go MetaWell AI! Kgetha polelo: 1.Sepedi 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Dumela! Beakanya nako? (Ee/Aowa)",
+            'show_days': "Matšatši: {days}. Letšatši lefe?",
+            'choose_day': "Gabotse! O {day}. Ke nyaka dinako...",
+            'show_slots': "Dinako ka {day}: {slots}. Nako efe?",
+            'booking_success': "✅ E tiišeditšwe! {day} ka {time}. SMS e romilwe!",
+            'goodbye': "Ke a leboga! Šala gabotse!",
+            'yes': ['ee', 'e'], 'no': ['aowa', 'a']
+        }
     },
     'xitsonga': {
-        'Monday': 'Musumbhunuku', 'Tuesday': 'Ravumbirhi', 'Wednesday': 'Ravurharhu',
-        'Thursday': 'Ravumune', 'Friday': 'Ravuntlhanu', 'Saturday': 'Mugqivela', 'Sunday': 'Sonto'
+        'code': 'ts',
+        'name': 'Xitsonga',
+        'days': {
+            'Monday': 'Musumbhunuku', 'Tuesday': 'Ravumbirhi', 'Wednesday': 'Ravurharhu',
+            'Thursday': 'Ravumune', 'Friday': 'Ravuntlhanu', 'Saturday': 'Mugqivela', 'Sunday': 'Sonto'
+        },
+        'responses': {
+            'welcome': "U amukeriwe eMetaWell AI! Hlawula ririmi: 1.Xitsonga 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Tshivenda 10.isNdebele 11.siSwati",
+            'greeting': "Avuxeni! Hlayisa nkarhi? (Ina/E-e)",
+            'show_days': "Masiku: {days}. Siku rini?",
+            'choose_day': "Swi kahle! U {day}. Ndza lava tinako...",
+            'show_slots': "Tinako ka {day}: {slots}. Nkarhi rini?",
+            'booking_success': "✅ Wu tiyisisiwe! {day} hi {time}. SMS yi rhumeriwe!",
+            'goodbye': "Ndza nkhensa! Sala kahle!",
+            'yes': ['ina', 'i'], 'no': ['e-e', 'e']
+        }
     },
     'tshivenda': {
-        'Monday': 'Musumbuluwo', 'Tuesday': 'Ḽavhuvhili', 'Wednesday': 'Ḽavhuraru',
-        'Thursday': 'Ḽavhuṋa', 'Friday': 'Ḽavhuṱanu', 'Saturday': 'Mugivhela', 'Sunday': 'Swondaha'
+        'code': 've',
+        'name': 'Tshivenda',
+        'days': {
+            'Monday': 'Musumbuluwo', 'Tuesday': 'Ḽavhuvhili', 'Wednesday': 'Ḽavhuraru',
+            'Thursday': 'Ḽavhuṋa', 'Friday': 'Ḽavhuṱanu', 'Saturday': 'Mugivhela', 'Sunday': 'Swondaha'
+        },
+        'responses': {
+            'welcome': "No ambani kha MetaWell AI! Nanga luambo: 1.Tshivenda 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.isNdebele 11.siSwati",
+            'greeting': "Ndaa! Bika tshifhinga? (Ee/Aa)",
+            'show_days': "Matshili: {days}. Musi?",
+            'choose_day': "Zwavhudi! U {day}. Ndi toda tshifhinga...",
+            'show_slots': "Tshifhinga kha {day}: {slots}. Tshifhinga tshiani?",
+            'booking_success': "✅ Tshi tanganedzwa! {day} tsha {time}. SMS yo rumwa!",
+            'goodbye': "Ndi a livhuwa! Sala zwavhudi!",
+            'yes': ['ee', 'e'], 'no': ['aa', 'a']
+        }
     },
     'isindebele': {
-        'Monday': 'Mvulo', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu',
-        'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Sonto'
+        'code': 'nr',
+        'name': 'isiNdebele',
+        'days': {
+            'Monday': 'Mvulo', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu',
+            'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Sonto'
+        },
+        'responses': {
+            'welcome': "Uyamukelwa eMetaWell AI! Khetha ulimi: 1.isNdebele 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.Tshivenda 11.siSwati",
+            'greeting': "Salibonani! Bhuka isikhathi? (Yebo/Cha)",
+            'show_days': "Izinsuku: {days}. Usuku luni?",
+            'choose_day': "Kuhle! U-{day}. Ngibheka izikhathi...",
+            'show_slots': "Izikhathi ku-{day}: {slots}. Isikhathi sini?",
+            'booking_success': "✅ Siqinisekisiwe! {day} nge-{time}. Izaziso zithunyelwe!",
+            'goodbye': "Ngiyabonga! Sala kahle!",
+            'yes': ['yebo', 'y'], 'no': ['cha', 'c']
+        }
     },
     'siswati': {
-        'Monday': 'Msombuluko', 'Tuesday': 'Lesibili', 'Wednesday': 'Lesitsatfu',
-        'Thursday': 'Lesine', 'Friday': 'Lesihlanu', 'Saturday': 'Mgcibelo', 'Sunday': 'Lisontfo'
+        'code': 'ss',
+        'name': 'siSwati',
+        'days': {
+            'Monday': 'Msombuluko', 'Tuesday': 'Lesibili', 'Wednesday': 'Lesitsatfu',
+            'Thursday': 'Lesine', 'Friday': 'Lesihlanu', 'Saturday': 'Mgcibelo', 'Sunday': 'Lisontfo'
+        },
+        'responses': {
+            'welcome': "Uyemukelwa eMetaWell AI! Khetsa lulwimi: 1.siSwati 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.Tshivenda 11.isNdebele",
+            'greeting': "Sawubona! Bhuka sikhatsi? (Yebo/Cha)",
+            'show_days': "Emalanga: {days}. Lilanga liphi?",
+            'choose_day': "Kuhle! U {day}. Ngibuka emasikhatsi...",
+            'show_slots': "Emasikhatsi nge-{day}: {slots}. Sikhatsi siphi?",
+            'booking_success': "✅ Sigcizeleliwe! {day} nge-{time}. SMS itfunyelwe!",
+            'goodbye': "Ngiyabonga! Sala kahle!",
+            'yes': ['yebo', 'y'], 'no': ['cha', 'c']
+        }
     }
 }
 
-# COMPLETE 11 South African Languages Conversation Texts
-CONVERSATION_TEXTS = {
-    'english': {
-        'welcome': "Welcome to MetaWell AI Clinic! Choose language: 1.English 2.isZulu 3.isXhosa 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Hello! Would you like to book a medical appointment? (Yes/No)",
-        'show_days': "Available days: {days}. Which day would you like?",
-        'choose_day': "Great! You chose {day}. Checking available times...",
-        'show_slots': "Available times on {day}: {slots}. Which time would you like?",
-        'no_slots': "No slots available on {day}. Please choose another day: {days}",
-        'booking_success': "✅ Appointment confirmed for {day} at {time}. SMS confirmation sent!",
-        'goodbye': "Thank you for using MetaWell AI. Goodbye!",
-        'yes': 'yes', 'no': 'no'
-    },
-    'isizulu': {
-        'welcome': "Uyemukelwa ku-MetaWell AI! Khetha ulimi: 1.isZulu 2.English 3.isXhosa 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Sawubona! Ingabe ufuna ukubhuka isikhathi soku vakasha? (Yebo/Cha)",
-        'show_days': "Izinsuku ezitholakalayo: {days}. Ufuna usuku luni?",
-        'choose_day': "Kuhle! Ukhethe u-{day}. Ngibheka izikhathi...",
-        'show_slots': "Izikhathi ku-{day}: {slots}. Ufuna isikhathi sini?",
-        'no_slots': "Azikho izikhathi ku-{day}. Khetha olunye usuku: {days}",
-        'booking_success': "✅ Isikhathi sakho siqinisekisiwe ku-{day} nge-{time}. I-SMS isithunyelwe!",
-        'goodbye': "Ngiyabonga! Sala kahle!",
-        'yes': 'yebo', 'no': 'cha'
-    },
-    'isixhosa': {
-        'welcome': "Wamkelekile kwi-MetaWell AI! Khetha ulwimi: 1.isXhosa 2.English 3.isZulu 4.Afrikaans 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Molo! Ingaba ufuna ukubhukisha i-appointment? (Ewe/Hayi)",
-        'show_days': "Iintsuku ezikhoyo: {days}. Ufuna usuku luni?",
-        'choose_day': "Kulungile! Ukhethe u-{day}. Ndiyakhangela iixesha...",
-        'show_slots': "Iixesha ku-{day}: {slots}. Ufuna ixesha lini?",
-        'no_slots': "Azikho iixesha ku-{day}. Khetha enye intsuku: {days}",
-        'booking_success': "✅ I-appointment yakho iqinisekisiwe ku-{day} nge-{time}. I-SMS ithunyelwe!",
-        'goodbye': "Enkosi! Sala kakuhle!",
-        'yes': 'ewe', 'no': 'hayi'
-    },
-    'afrikaans': {
-        'welcome': "Welkom by MetaWell AI! Kies taal: 1.Afrikaans 2.English 3.isZulu 4.isXhosa 5.Sesotho 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Hallo! Wil jy 'n afspraak maak? (Ja/Nee)",
-        'show_days': "Beskikbare dae: {days}. Watter dag verkies jy?",
-        'choose_day': "Goed! Jy het {day} gekies. Gaan tye na...",
-        'show_slots': "Beskikbare tye op {day}: {slots}. Watter tyd verkies jy?",
-        'no_slots': "Geen tye op {day}. Kies ander dag: {days}",
-        'booking_success': "✅ Afspraak bevestig vir {day} om {time}. SMS gestuur!",
-        'goodbye': "Dankie! Totsiens!",
-        'yes': 'ja', 'no': 'nee'
-    },
-    'sesotho': {
-        'welcome': "O amohetswe ho MetaWell AI! Khetha puo: 1.Sesotho 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Setswana 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Dumela! Na o batla ho beha nako ya kalafo? (Ee/Che)",
-        'show_days': "Matsatsi a fumanehang: {days}. O batla letsatsi lefe?",
-        'choose_day': "Hantle! O khethe {day}. Ke batla hora...",
-        'show_slots': "Hora ke {day}: {slots}. Ka nako efe?",
-        'no_slots': "Ha ho hora {day}. Khetha letsatsi le leng: {days}",
-        'booking_success': "✅ Nako ya hao e netefaditswe ka {day} ka {time}. SMS e rometswe!",
-        'goodbye': "Kea leboha! Sala hantle!",
-        'yes': 'ee', 'no': 'che'
-    },
-    'setswana': {
-        'welcome': "O amogetswe kwa MetaWell AI! Kgetha puo: 1.Setswana 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Sepedi 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Dumela! A o batla go beakanya nako ya kalafi? (Ee/Nnyaa)",
-        'show_days': "Matsatsi a a leng teng: {days}. O batla letsatsi mang?",
-        'choose_day': "Sentle! O kgethile {day}. Ke batla dinako...",
-        'show_slots': "Dinako ka {day}: {slots}. O batla nako mang?",
-        'no_slots': "Ga go dinako ka {day}. Kgetha letsatsi le lengwe: {days}",
-        'booking_success': "✅ Nako ya gago e tshotlweetswe ka {day} ka {time}. SMS e romilwe!",
-        'goodbye': "Ke a leboga! Sala sentle!",
-        'yes': 'ee', 'no': 'nnyaa'
-    },
-    'sepedi': {
-        'welcome': "O amogetšwe go MetaWell AI! Kgetha polelo: 1.Sepedi 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Xitsonga 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Dumela! Na o nyaka go beakanya nako ya kalafo? (Ee/Aowa)",
-        'show_days': "Matšatši a a lego gona: {days}. O nyaka letšatši lefe?",
-        'choose_day': "Gabotse! O kgethile {day}. Ke nyaka dinako...",
-        'show_slots': "Dinako ka {day}: {slots}. O nyaka nako efe?",
-        'no_slots': "Ga go na dinako ka {day}. Kgetha letšatši le lengwe: {days}",
-        'booking_success': "✅ Nako ya gago e tiišeditšwe ka {day} ka {time}. SMS e romilwe!",
-        'goodbye': "Ke a leboga! Šala gabotse!",
-        'yes': 'ee', 'no': 'aowa'
-    },
-    'xitsonga': {
-        'welcome': "U amukeriwe eMetaWell AI! Hlawula ririmi: 1.Xitsonga 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Tshivenda 10.isNdebele 11.siSwati",
-        'greeting': "Avuxeni! Xana u lava ku hlayisa nkarhi wa vuswikoti? (Ina/E-e)",
-        'show_days': "Masiku ya ku kuma: {days}. U lava siku rini?",
-        'choose_day': "Swi kahle! U hlawule {day}. Ndza lava tinako...",
-        'show_slots': "Tinako ka {day}: {slots}. U lava nkarhi rini?",
-        'no_slots': "A ku na tinako ka {day}. Hlawula sin'wana siku: {days}",
-        'booking_success': "✅ Nkarhi wa wena wu tiyisisiwe ka {day} hi {time}. SMS yi rhumeriwe!",
-        'goodbye': "Ndza nkhensa! Sala kahle!",
-        'yes': 'ina', 'no': 'e-e'
-    },
-    'tshivenda': {
-        'welcome': "No ambani kha MetaWell AI! Nanga luambo: 1.Tshivenda 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.isNdebele 11.siSwati",
-        'greeting': "Ndaa! Naa u toda u bika tshifhinga tsha vhulapfu? (Ee/Aa)",
-        'show_days': "Matshili a wanala: {days}. U toda musi?",
-        'choose_day': "Zwavhudi! U nanga {day}. Ndi toda tshifhinga...",
-        'show_slots': "Tshifhinga kha {day}: {slots}. U toda tshifhinga tshiani?",
-        'no_slots': "A hu na tshifhinga kha {day}. Nanga linwe musi: {days}",
-        'booking_success': "✅ Tshifhinga tshawe tshi tanganedzwa kha {day} tsha {time}. SMS yo rumwa!",
-        'goodbye': "Ndi a livhuwa! Sala zwavhudi!",
-        'yes': 'ee', 'no': 'aa'
-    },
-    'isindebele': {
-        'welcome': "Uyamukelwa eMetaWell AI! Khetha ulimi: 1.isNdebele 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.Tshivenda 11.siSwati",
-        'greeting': "Salibonani! Ingabe ufuna ukubhuka isikhathi sokwelapha? (Yebo/Cha)",
-        'show_days': "Izinsuku ezitholakalayo: {days}. Ufuna usuku luni?",
-        'choose_day': "Kuhle! Ukhethe u-{day}. Ngibheka izikhathi...",
-        'show_slots': "Izikhathi ku-{day}: {slots}. Ufuna isikhathi sini?",
-        'no_slots': "Azikho izikhathi ku-{day}. Khetha olunye usuku: {days}",
-        'booking_success': "✅ Isikhathi sakho siqinisekisiwe ku-{day} nge-{time}. Izaziso zithunyelwe!",
-        'goodbye': "Ngiyabonga! Sala kahle!",
-        'yes': 'yebo', 'no': 'cha'
-    },
-    'siswati': {
-        'welcome': "Uyemukelwa eMetaWell AI! Khetsa lulwimi: 1.siSwati 2.English 3.isZulu 4.isXhosa 5.Afrikaans 6.Sesotho 7.Setswana 8.Sepedi 9.Xitsonga 10.Tshivenda 11.isNdebele",
-        'greeting': "Sawubona! Ingabe ufuna kubhuka sikhatsi sekwelapha? (Yebo/Cha)",
-        'show_days': "Emalanga lakhona: {days}. Ufuna lilanga liphi?",
-        'choose_day': "Kuhle! Ukhetse {day}. Ngibuka emasikhatsi...",
-        'show_slots': "Emasikhatsi nge-{day}: {slots}. Ufuna sikhatsi siphi?",
-        'no_slots': "Awunawo emasikhatsi nge-{day}. Khetsa lilanga lelilodza: {days}",
-        'booking_success': "✅ Sikhatsi sakho sigcizeleliwe nge-{day} nge-{time}. SMS itfunyelwe!",
-        'goodbye': "Ngiyabonga! Sala kahle!",
-        'yes': 'yebo', 'no': 'cha'
+# Simple language detection based on common words
+def detect_language_simple(text):
+    text_lower = text.lower()
+    
+    language_keywords = {
+        'isizulu': ['sawubona', 'yebo', 'cha', 'ngiyabonga', 'isikhathi'],
+        'isixhosa': ['molo', 'ewe', 'hayi', 'enkosi', 'ixesha'],
+        'afrikaans': ['hallo', 'ja', 'nee', 'dankie', 'afspraak'],
+        'sesotho': ['lumela', 'ee', 'che', 'kea leboha', 'nako'],
+        'setswana': ['dumela', 'ee', 'nnyaa', 'ke a leboga', 'nako'],
+        'sepedi': ['dumela', 'ee', 'aowa', 'ke a leboga', 'nako'],
+        'xitsonga': ['avuxeni', 'ina', 'e-e', 'ndza nkhensa', 'nkarhi'],
+        'tshivenda': ['ndaa', 'ee', 'aa', 'ndi a livhuwa', 'tshifhinga'],
+        'isindebele': ['salibonani', 'yebo', 'cha', 'ngiyabonga', 'isikhathi'],
+        'siswati': ['sawubona', 'yebo', 'cha', 'ngiyabonga', 'sikhatsi']
     }
-}
+    
+    for lang, keywords in language_keywords.items():
+        if any(keyword in text_lower for keyword in keywords):
+            return lang
+    
+    return 'english'
 
 # Data Storage with Persistence
 def load_data():
     try:
         with open('data.json', 'r') as f:
-            data = json.load(f)
-            return data.get("patients", {}), data.get("conversations", {}), data.get("bookings", [])
+            return json.load(f)
     except:
-        return {}, {}, []
+        return {"patients": {}, "conversations": {}, "bookings": []}
 
-def save_data():
+def save_data(data):
     with open('data.json', 'w') as f:
-        json.dump({
-            "patients": patient_profiles,
-            "conversations": conversation_states, 
-            "bookings": all_bookings
-        }, f)
+        json.dump(data, f)
 
 # Load existing data
-patient_profiles, conversation_states, all_bookings = load_data()
-translator = Translator()
-
-def detect_language(text):
-    """Detect input language"""
-    try:
-        lang_code = detect(text)
-        # Map language codes to our language keys
-        lang_map = {
-            'en': 'english', 'zu': 'isizulu', 'xh': 'isixhosa', 'af': 'afrikaans',
-            'st': 'sesotho', 'tn': 'setswana', 'nso': 'sepedi', 'ts': 'xitsonga',
-            've': 'tshivenda', 'nr': 'isindebele', 'ss': 'siswati'
-        }
-        return lang_map.get(lang_code, 'english')
-    except:
-        return 'english'
+app_data = load_data()
+patient_profiles = app_data.get("patients", {})
+conversation_states = app_data.get("conversations", {})
+all_bookings = app_data.get("bookings", [])
 
 def get_available_days(language='english'):
     """Get next available days in specified language"""
@@ -248,10 +281,10 @@ def get_available_days(language='english'):
         
         if day_name_en in CLINIC_HOURS and CLINIC_HOURS[day_name_en]:
             booked_count = len([b for b in all_bookings 
-                              if b["day"] == day_name_en and b["status"] == "active"])
+                              if b.get("day") == day_name_en and b.get("status") == "active"])
             
             if booked_count < MAX_DAILY_SLOTS:
-                day_translated = DAY_TRANSLATIONS[language].get(day_name_en, day_name_en)
+                day_translated = LANGUAGE_CONFIG[language]['days'].get(day_name_en, day_name_en)
                 available_days.append(day_translated)
     
     return available_days
@@ -260,8 +293,8 @@ def get_available_slots(day_translated, language='english'):
     """Get available slots for a day"""
     # Convert translated day back to English for internal processing
     day_english = day_translated
-    for lang, days in DAY_TRANSLATIONS.items():
-        for eng_day, trans_day in days.items():
+    for lang_config in LANGUAGE_CONFIG.values():
+        for eng_day, trans_day in lang_config['days'].items():
             if trans_day == day_translated:
                 day_english = eng_day
                 break
@@ -270,7 +303,7 @@ def get_available_slots(day_translated, language='english'):
         return []
     
     booked_slots = [b["time"] for b in all_bookings 
-                   if b["day"] == day_english and b["status"] == "active"]
+                   if b.get("day") == day_english and b.get("status") == "active"]
     
     return [slot for slot in CLINIC_HOURS[day_english] if slot not in booked_slots]
 
@@ -278,14 +311,14 @@ def create_booking(patient_phone, day_translated, time, language='english'):
     """Create booking in specified language"""
     # Convert translated day back to English
     day_english = day_translated
-    for lang, days in DAY_TRANSLATIONS.items():
-        for eng_day, trans_day in days.items():
+    for lang_config in LANGUAGE_CONFIG.values():
+        for eng_day, trans_day in lang_config['days'].items():
             if trans_day == day_translated:
                 day_english = eng_day
                 break
     
     if time not in get_available_slots(day_translated, language):
-        return None, CONVERSATION_TEXTS[language]['no_slots'].format(day=day_translated, days=", ".join(get_available_days(language)))
+        return None, "Slot not available"
     
     booking_id = hashlib.md5(f"{patient_phone}{day_english}{time}{datetime.now()}".encode()).hexdigest()
     
@@ -300,24 +333,25 @@ def create_booking(patient_phone, day_translated, time, language='english'):
     }
     
     all_bookings.append(booking)
-    save_data()
+    app_data["bookings"] = all_bookings
+    save_data(app_data)
     
     return booking, "success"
 
 def send_sms_confirmation(patient_phone, day_translated, time, language='english'):
     """Send SMS in patient's language"""
     messages = {
-        'english': f"🏥 MetaWell AI: Appointment confirmed for {day_translated} at {time}.",
-        'isizulu': f"🏥 MetaWell AI: Isikhathi sakho siqinisekisiwe ngo-{day_translated} nge-{time}.",
-        'isixhosa': f"🏥 MetaWell AI: I-appointment yakho iqinisekisiwe ku-{day_translated} nge-{time}.",
-        'afrikaans': f"🏥 MetaWell AI: Afspraak bevestig vir {day_translated} om {time}.",
-        'sesotho': f"🏥 MetaWell AI: Nako ea hau e netefalitsoe ka {day_translated} ka {time}.",
-        'setswana': f"🏥 MetaWell AI: Nako ya gago e tshotlweetswe ka {day_translated} ka {time}.",
-        'sepedi': f"🏥 MetaWell AI: Nako ya gago e tiišeditšwe ka {day_translated} ka {time}.",
-        'xitsonga': f"🏥 MetaWell AI: Nkarhi wa wena wu tiyisisiwe ka {day_translated} hi {time}.",
-        'tshivenda': f"🏥 MetaWell AI: Tshifhinga tshawe tshi tanganedzwa kha {day_translated} tsha {time}.",
-        'isindebele': f"🏥 MetaWell AI: Isikhathi sakho siqinisekisiwe ku-{day_translated} nge-{time}.",
-        'siswati': f"🏥 MetaWell AI: Sikhatsi sakho sigcizeleliwe nge-{day_translated} nge-{time}."
+        'english': f"🏥 MetaWell AI: Confirmed for {day_translated} at {time}",
+        'isizulu': f"🏥 MetaWell AI: Siqinisekisiwe ngo-{day_translated} nge-{time}",
+        'isixhosa': f"🏥 MetaWell AI: Iqinisekisiwe ku-{day_translated} nge-{time}",
+        'afrikaans': f"🏥 MetaWell AI: Bevestig vir {day_translated} om {time}",
+        'sesotho': f"🏥 MetaWell AI: E netefalitsoe ka {day_translated} ka {time}",
+        'setswana': f"🏥 MetaWell AI: E tshotlweetswe ka {day_translated} ka {time}",
+        'sepedi': f"🏥 MetaWell AI: E tiišeditšwe ka {day_translated} ka {time}",
+        'xitsonga': f"🏥 MetaWell AI: Wu tiyisisiwe ka {day_translated} hi {time}",
+        'tshivenda': f"🏥 MetaWell AI: Tshi tanganedzwa kha {day_translated} tsha {time}",
+        'isindebele': f"🏥 MetaWell AI: Siqinisekisiwe ku-{day_translated} nge-{time}",
+        'siswati': f"🏥 MetaWell AI: Sigcizeleliwe nge-{day_translated} nge-{time}"
     }
     
     try:
@@ -327,7 +361,8 @@ def send_sms_confirmation(patient_phone, day_translated, time, language='english
             to=patient_phone
         )
         return message.sid
-    except:
+    except Exception as e:
+        print(f"SMS Error: {e}")
         return None
 
 def process_message(message, phone_number):
@@ -338,52 +373,51 @@ def process_message(message, phone_number):
             'state': 'LANGUAGE_SELECTION',
             'language': 'english'
         }
+        app_data["conversations"] = conversation_states
+        save_data(app_data)
     
     state_data = conversation_states[phone_number]
     current_state = state_data['state']
     current_language = state_data['language']
+    lang_config = LANGUAGE_CONFIG[current_language]
     
     # Language Selection State
     if current_state == 'LANGUAGE_SELECTION':
         # Check for numeric selection (1-11)
         if msg_lower.isdigit() and 1 <= int(msg_lower) <= 11:
-            lang_keys = list(CONVERSATION_TEXTS.keys())
+            lang_keys = list(LANGUAGE_CONFIG.keys())
             selected_lang = lang_keys[int(msg_lower) - 1]
             state_data['language'] = selected_lang
             state_data['state'] = 'GREETING'
-            save_data()
-            return CONVERSATION_TEXTS[selected_lang]['greeting']
-        
-        # Check for language name in message
-        for lang_key in CONVERSATION_TEXTS.keys():
-            if lang_key in msg_lower or CONVERSATION_TEXTS[lang_key]['yes'].split('/')[0] in msg_lower:
-                state_data['language'] = lang_key
-                state_data['state'] = 'GREETING'
-                save_data()
-                return CONVERSATION_TEXTS[lang_key]['greeting']
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
+            return LANGUAGE_CONFIG[selected_lang]['responses']['greeting']
         
         # Auto-detect language
-        detected_lang = detect_language(message)
+        detected_lang = detect_language_simple(message)
         state_data['language'] = detected_lang
         state_data['state'] = 'GREETING'
-        save_data()
-        return CONVERSATION_TEXTS[detected_lang]['greeting']
+        app_data["conversations"] = conversation_states
+        save_data(app_data)
+        return LANGUAGE_CONFIG[detected_lang]['responses']['greeting']
     
     # Greeting State
     elif current_state == 'GREETING':
-        yes_words = CONVERSATION_TEXTS[current_language]['yes'].split('/')
-        no_words = CONVERSATION_TEXTS[current_language]['no'].split('/')
+        yes_words = lang_config['responses']['yes']
+        no_words = lang_config['responses']['no']
         
         if any(word in msg_lower for word in yes_words):
             state_data['state'] = 'SHOW_DAYS'
-            save_data()
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
             available_days = get_available_days(current_language)
             days_str = ", ".join(available_days)
-            return CONVERSATION_TEXTS[current_language]['show_days'].format(days=days_str)
+            return lang_config['responses']['show_days'].format(days=days_str)
         else:
             conversation_states[phone_number] = {'state': 'LANGUAGE_SELECTION', 'language': 'english'}
-            save_data()
-            return CONVERSATION_TEXTS[current_language]['goodbye']
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
+            return lang_config['responses']['goodbye']
     
     # Show Available Days
     elif current_state == 'SHOW_DAYS':
@@ -398,10 +432,11 @@ def process_message(message, phone_number):
         if chosen_day:
             state_data['selected_day'] = chosen_day
             state_data['state'] = 'SHOW_SLOTS'
-            save_data()
-            return CONVERSATION_TEXTS[current_language]['choose_day'].format(day=chosen_day)
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
+            return lang_config['responses']['choose_day'].format(day=chosen_day)
         else:
-            return CONVERSATION_TEXTS[current_language]['show_days'].format(days=", ".join(available_days))
+            return lang_config['responses']['show_days'].format(days=", ".join(available_days))
     
     # Show Available Time Slots
     elif current_state == 'SHOW_SLOTS':
@@ -410,16 +445,18 @@ def process_message(message, phone_number):
         
         if not slots:
             state_data['state'] = 'SHOW_DAYS'
-            save_data()
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
             available_days = get_available_days(current_language)
-            return CONVERSATION_TEXTS[current_language]['no_slots'].format(day=chosen_day, days=", ".join(available_days))
+            return f"No slots on {chosen_day}. Available: {', '.join(available_days)}"
         
         # If this is the first time showing slots, display them
         if 'shown_slots' not in state_data:
             state_data['shown_slots'] = True
-            save_data()
+            app_data["conversations"] = conversation_states
+            save_data(app_data)
             slots_str = ", ".join(slots)
-            return CONVERSATION_TEXTS[current_language]['show_slots'].format(day=chosen_day, slots=slots_str)
+            return lang_config['responses']['show_slots'].format(day=chosen_day, slots=slots_str)
         
         # Process time selection
         chosen_time = None
@@ -433,33 +470,35 @@ def process_message(message, phone_number):
             if booking:
                 send_sms_confirmation(phone_number, chosen_day, chosen_time, current_language)
                 conversation_states[phone_number] = {'state': 'LANGUAGE_SELECTION', 'language': 'english'}
-                save_data()
-                return CONVERSATION_TEXTS[current_language]['booking_success'].format(day=chosen_day, time=chosen_time)
+                app_data["conversations"] = conversation_states
+                save_data(app_data)
+                return lang_config['responses']['booking_success'].format(day=chosen_day, time=chosen_time)
             else:
-                return status
+                return "Slot taken. Choose another time."
         else:
             slots_str = ", ".join(slots)
-            return CONVERSATION_TEXTS[current_language]['show_slots'].format(day=chosen_day, slots=slots_str)
+            return lang_config['responses']['show_slots'].format(day=chosen_day, slots=slots_str)
     
     # Default case
     conversation_states[phone_number] = {'state': 'LANGUAGE_SELECTION', 'language': 'english'}
-    save_data()
-    return CONVERSATION_TEXTS['english']['welcome']
+    app_data["conversations"] = conversation_states
+    save_data(app_data)
+    return LANGUAGE_CONFIG['english']['responses']['welcome']
 
-# Flask Routes (REMAIN THE SAME)
+# Flask Routes
 @app.route('/')
 def home():
-    return "🏥 MetaWell AI Multilingual Healthcare System - ALL 11 LANGUAGES SUPPORT"
+    return "🏥 MetaWell AI - 11 Language Healthcare System - DEPLOYMENT READY"
 
 @app.route('/clinic')
 def clinic_dashboard():
-    active_bookings = [b for b in all_bookings if b["status"] == "active"]
+    active_bookings = [b for b in all_bookings if b.get("status") == "active"]
     
     stats_html = f"""
     <html>
     <head><title>MetaWell AI Dashboard</title></head>
     <body>
-        <h1>🏥 MetaWell AI Clinic Dashboard</h1>
+        <h1>🏥 MetaWell AI - 11 Languages Supported</h1>
         <div class="stats">
             <div class="stat-box">Patients: {len(patient_profiles)}</div>
             <div class="stat-box">Active Bookings: {len(active_bookings)}</div>
@@ -470,7 +509,7 @@ def clinic_dashboard():
     """
     
     for booking in active_bookings[-10:]:
-        stats_html += f"<li>{booking['day']} at {booking['time']} - {booking['patient_phone']} ({booking['language']})</li>"
+        stats_html += f"<li>{booking.get('day', 'Unknown')} at {booking.get('time', 'Unknown')} - {booking.get('patient_phone', 'Unknown')} ({booking.get('language', 'Unknown')})</li>"
     
     stats_html += "</ul></body></html>"
     return stats_html
@@ -485,6 +524,7 @@ def whatsapp_webhook():
         xml_response = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{response}</Message></Response>'
         return Response(xml_response, mimetype='text/xml')
     except Exception as e:
+        print(f"Error: {e}")
         error_xml = '<?xml version="1.0" encoding="UTF-8"?><Response><Message>System error. Please try again.</Message></Response>'
         return Response(error_xml, mimetype='text/xml')
 
