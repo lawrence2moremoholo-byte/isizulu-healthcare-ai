@@ -224,6 +224,32 @@ def dashboard():
                          upcoming_appointments=upcoming_appointments,
                          recent_appointments=recent_appointments,
                          language_stats=language_stats)
+    
+@app.route('/add_appointment', methods=['GET', 'POST'])
+@login_required
+def add_appointment():
+    if request.method == 'POST':
+        try:
+            appointment = Appointment(
+                patient_id=request.form.get('patient_id'),
+                appointment_date=datetime.strptime(request.form.get('appointment_date'), '%Y-%m-%d').date(),
+                appointment_time=request.form.get('appointment_time'),
+                reason=request.form.get('reason'),
+                notes=request.form.get('notes'),
+                language=request.form.get('language', 'english')
+            )
+            
+            db.session.add(appointment)
+            db.session.commit()
+            flash('Appointment scheduled successfully!', 'success')
+            return redirect(url_for('appointments'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error scheduling appointment: {str(e)}', 'error')
+    
+    patients = Patient.query.order_by(Patient.first_name, Patient.last_name).all()
+    return render_template('add_appointment.html', patients=patients, datetime=datetime)
 
 @app.route('/logout')
 @login_required
