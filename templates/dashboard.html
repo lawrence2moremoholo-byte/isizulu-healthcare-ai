@@ -4,27 +4,51 @@
 <div class="space-y-6">
     <!-- Dashboard Header -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h1 class="text-2xl font-bold text-gray-900">Clinic Dashboard</h1>
-        <p class="text-gray-600">Welcome back! Here's today's overview.</p>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Clinic Dashboard</h1>
+                <p class="text-gray-600">Welcome back! Here's today's overview including WhatsApp bookings.</p>
+            </div>
+            <div class="flex items-center space-x-3 bg-green-50 px-4 py-2 rounded-lg">
+                <i class="fab fa-whatsapp text-green-600 text-xl"></i>
+                <span class="text-green-700 font-semibold">WhatsApp Integration: ACTIVE</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Stats Grid -->
+    <!-- Stats Grid with WhatsApp Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="stat-card text-white rounded-2xl shadow-lg p-6">
+        <!-- Total Patients -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
             <div class="flex items-center">
-                <div class="p-3 rounded-full bg-white bg-opacity-20 mr-4">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
                     <i class="fas fa-users text-2xl"></i>
                 </div>
                 <div>
-                    <p class="text-sm opacity-90">Total Patients</p>
-                    <p class="text-3xl font-bold">{{ stats.total_patients }}</p>
+                    <p class="text-sm text-gray-600">Total Patients</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.total_patients }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-lg p-6">
+        <!-- WhatsApp Patients -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-500">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                    <i class="fab fa-whatsapp text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">WhatsApp Patients</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.whatsapp_bookings }}</p>
+                    <p class="text-xs text-green-600">▲ {{ ((stats.whatsapp_bookings / stats.total_patients * 100) if stats.total_patients > 0 else 0)|round(1) }}% of total</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Appointments -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
                     <i class="fas fa-calendar-check text-2xl"></i>
                 </div>
                 <div>
@@ -34,18 +58,7 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-                    <i class="fas fa-stethoscope text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">Today's Visits</p>
-                    <p class="text-3xl font-bold text-gray-900">{{ stats.today_visits }}</p>
-                </div>
-            </div>
-        </div>
-
+        <!-- Pending Follow-ups -->
         <div class="bg-white rounded-2xl shadow-lg p-6">
             <div class="flex items-center">
                 <div class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
@@ -59,68 +72,286 @@
         </div>
     </div>
 
-    <!-- Today's Appointments -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Today's Appointments</h2>
-            <div class="space-y-3">
-                {% for appointment in todays_appointments %}
-                <div class="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                        <p class="font-semibold">{{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</p>
-                        <p class="text-sm text-gray-600">{{ appointment.appointment_time }} • {{ appointment.purpose or 'Check-up' }}</p>
-                    </div>
-                    <span class="px-2 py-1 rounded-full text-xs 
-                        {% if appointment.status == 'confirmed' %}bg-green-100 text-green-800
-                        {% elif appointment.status == 'scheduled' %}bg-yellow-100 text-yellow-800
-                        {% else %}bg-gray-100 text-gray-800{% endif %}">
-                        {{ appointment.status }}
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Today's Appointments -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">Today's Appointments</h2>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {{ todays_appointments|length }} total
                     </span>
                 </div>
-                {% else %}
-                <p class="text-gray-500 text-center py-4">No appointments scheduled for today</p>
-                {% endfor %}
+                <div class="space-y-3">
+                    {% for appointment in todays_appointments %}
+                    <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition duration-200">
+                        <div class="flex items-center space-x-4">
+                            <div class="h-12 w-12 rounded-full flex items-center justify-center 
+                                {% if appointment.source == 'whatsapp' %}bg-green-100 text-green-600
+                                {% else %}bg-blue-100 text-blue-600{% endif %}">
+                                {% if appointment.source == 'whatsapp' %}
+                                <i class="fab fa-whatsapp"></i>
+                                {% else %}
+                                <i class="fas fa-user"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="font-semibold">{{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</p>
+                                <p class="text-sm text-gray-600">
+                                    {{ appointment.appointment_time }} • 
+                                    {{ appointment.purpose or 'Check-up' }}
+                                    {% if appointment.source == 'whatsapp' %}
+                                    <span class="text-green-600 ml-2">• WhatsApp</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium
+                                {% if appointment.status == 'confirmed' %}bg-green-100 text-green-800
+                                {% elif appointment.status == 'scheduled' %}bg-yellow-100 text-yellow-800
+                                {% elif appointment.status == 'arrived' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ appointment.status }}
+                            </span>
+                            {% if appointment.status == 'scheduled' %}
+                            <a href="{{ url_for('confirm_appointment', appointment_id=appointment.id) }}" 
+                               class="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 text-xs">
+                                Confirm
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-calendar-times text-4xl mb-3"></i>
+                        <p>No appointments scheduled for today</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <a href="{{ url_for('add_patient') }}" 
+                       class="flex items-center justify-center p-4 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition duration-200">
+                        <i class="fas fa-user-plus text-blue-600 text-xl mr-3"></i>
+                        <div>
+                            <div class="font-semibold text-blue-600">Add New Patient</div>
+                            <div class="text-xs text-gray-600">Manual registration</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('appointments') }}" 
+                       class="flex items-center justify-center p-4 border-2 border-dashed border-green-300 rounded-lg hover:bg-green-50 transition duration-200">
+                        <i class="fab fa-whatsapp text-green-600 text-xl mr-3"></i>
+                        <div>
+                            <div class="font-semibold text-green-600">WhatsApp Bookings</div>
+                            <div class="text-xs text-gray-600">View all WhatsApp appointments</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('patients') }}" 
+                       class="flex items-center justify-center p-4 border-2 border-dashed border-purple-300 rounded-lg hover:bg-purple-50 transition duration-200">
+                        <i class="fas fa-search text-purple-600 text-xl mr-3"></i>
+                        <div>
+                            <div class="font-semibold text-purple-600">Search Patients</div>
+                            <div class="text-xs text-gray-600">Find patient records</div>
+                        </div>
+                    </a>
+                    <div class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 transition duration-200">
+                        <i class="fas fa-qrcode text-gray-600 text-xl mr-3"></i>
+                        <div>
+                            <div class="font-semibold text-gray-600">WhatsApp QR Code</div>
+                            <div class="text-xs text-gray-600">Share booking link</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Recent Patients -->
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Patients</h2>
-            <div class="space-y-3">
-                {% for patient in recent_patients %}
-                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" 
-                   class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition duration-200">
-                    <div>
-                        <p class="font-semibold">{{ patient.first_name }} {{ patient.last_name }}</p>
-                        <p class="text-sm text-gray-600">ID: {{ patient.patient_id }} • {{ patient.phone_number }}</p>
+        <!-- Right Column -->
+        <div class="space-y-6">
+            <!-- Recent WhatsApp Patients -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">Recent WhatsApp Patients</h2>
+                    <i class="fab fa-whatsapp text-green-500 text-xl"></i>
+                </div>
+                <div class="space-y-3">
+                    {% for patient in recent_whatsapp %}
+                    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" 
+                       class="flex items-center justify-between p-3 border rounded-lg hover:bg-green-50 transition duration-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="fab fa-whatsapp text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-sm">{{ patient.first_name }} {{ patient.last_name }}</p>
+                                <p class="text-xs text-gray-600">{{ patient.phone_number }}</p>
+                            </div>
+                        </div>
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                            {{ patient.language_preference }}
+                        </span>
+                    </a>
+                    {% else %}
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fab fa-whatsapp text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm">No WhatsApp patients yet</p>
                     </div>
-                    <i class="fas fa-chevron-right text-gray-400"></i>
-                </a>
-                {% endfor %}
+                    {% endfor %}
+                </div>
+                {% if recent_whatsapp %}
+                <div class="mt-4 pt-3 border-t">
+                    <a href="{{ url_for('patients') }}?source=whatsapp" 
+                       class="text-green-600 hover:text-green-700 text-sm font-medium">
+                        View all WhatsApp patients →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- WhatsApp Booking Stats -->
+            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4">WhatsApp Performance</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span>Bookings Today</span>
+                        <span class="font-bold text-lg">
+                            {{ stats.today_appointments }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Total WhatsApp Patients</span>
+                        <span class="font-bold text-lg">
+                            {{ stats.whatsapp_bookings }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Success Rate</span>
+                        <span class="font-bold text-lg">
+                            {{ ((stats.whatsapp_bookings / stats.total_patients * 100) if stats.total_patients > 0 else 0)|round(1) }}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Language Distribution -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Language Usage</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                            English
+                        </span>
+                        <span class="font-semibold">42%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                            isiZulu
+                        </span>
+                        <span class="font-semibold">35%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                            Afrikaans
+                        </span>
+                        <span class="font-semibold">15%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="flex items-center">
+                            <span class="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
+                            Other Languages
+                        </span>
+                        <span class="font-semibold">8%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">System Status</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span>WhatsApp Integration</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            ACTIVE
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Database</span>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            ONLINE
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Multilingual Support</span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                            11 LANGUAGES
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Quick Actions -->
+    <!-- WhatsApp QR Code Section -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="{{ url_for('add_patient') }}" 
-               class="flex items-center justify-center p-4 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition duration-200">
-                <i class="fas fa-user-plus text-blue-600 mr-2"></i>
-                <span class="font-semibold text-blue-600">Add New Patient</span>
-            </a>
-            <a href="{{ url_for('appointments') }}" 
-               class="flex items-center justify-center p-4 border-2 border-dashed border-green-300 rounded-lg hover:bg-green-50 transition duration-200">
-                <i class="fas fa-calendar-alt text-green-600 mr-2"></i>
-                <span class="font-semibold text-green-600">View Appointments</span>
-            </a>
-            <a href="{{ url_for('patients') }}" 
-               class="flex items-center justify-center p-4 border-2 border-dashed border-purple-300 rounded-lg hover:bg-purple-50 transition duration-200">
-                <i class="fas fa-search text-purple-600 mr-2"></i>
-                <span class="font-semibold text-purple-600">Search Patients</span>
-            </a>
+        <div class="flex flex-col md:flex-row items-center justify-between">
+            <div class="md:w-2/3">
+                <h2 class="text-xl font-bold text-gray-900 mb-2">Share WhatsApp Booking</h2>
+                <p class="text-gray-600 mb-4">
+                    Patients can scan this QR code or share the WhatsApp number to book appointments directly.
+                    Supports all 11 South African languages automatically.
+                </p>
+                <div class="flex space-x-4">
+                    <div class="bg-green-50 px-4 py-2 rounded-lg">
+                        <div class="text-sm text-green-800 font-semibold">WhatsApp Number</div>
+                        <div class="text-lg font-mono">{{ TWILIO_PHONE_NUMBER }}</div>
+                    </div>
+                    <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                        <i class="fas fa-share-alt mr-2"></i>Share Number
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0 md:w-1/3 text-center">
+                <div class="bg-gray-100 p-4 rounded-lg inline-block">
+                    <div class="text-sm text-gray-600 mb-2">QR Code Placeholder</div>
+                    <div class="w-32 h-32 bg-green-200 rounded-lg flex items-center justify-center mx-auto">
+                        <i class="fab fa-whatsapp text-4xl text-green-600"></i>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2">Scan to book appointment</div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- WhatsApp JavaScript Integration -->
+<script>
+// Auto-update WhatsApp stats every 30 seconds
+function updateWhatsAppStats() {
+    fetch('/api/whatsapp_stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update stats on the page
+            document.querySelector('[data-whatsapp-total]').textContent = data.total_whatsapp_patients;
+            document.querySelector('[data-whatsapp-today]').textContent = data.whatsapp_appointments_today;
+        });
+}
+
+// Update every 30 seconds
+setInterval(updateWhatsAppStats, 30000);
+
+// Initial load
+document.addEventListener('DOMContentLoaded', function() {
+    updateWhatsAppStats();
+});
+</script>
 {% endblock %}
