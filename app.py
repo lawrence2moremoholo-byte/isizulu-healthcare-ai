@@ -923,8 +923,6 @@ def add_appointment():
     return render_template('add_appointment.html', patients=patients, datetime=datetime)
 
 # Enhanced WhatsApp conversation states
-whatsapp_conversations = {}
-CLINIC_HOURS = {"start": "06:00", "end": "21:00"}  # 6am to 9pm
 
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
