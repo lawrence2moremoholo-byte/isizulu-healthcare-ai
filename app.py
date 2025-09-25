@@ -175,6 +175,120 @@ def dashboard():
                          upcoming_appointments=upcoming_appointments,
                          recent_appointments=recent_appointments,
                          language_stats=language_stats)
+# Add these routes after the dashboard route
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/patients')
+@login_required
+def patients():
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get('search', '')
+    
+    query = Patient.query
+    
+    if search:
+        query = query.filter(
+            (Patient.first_name.ilike(f'%{search}%')) |
+            (Patient.last_name.ilike(f'%{search}%')) |
+            (Patient.patient_id.ilike(f'%{search}%')) |
+            (Patient.phone_number.ilike(f'%{search}%'))
+        )
+    
+    patients = query.order_by(Patient.created_at.desc()).paginate(
+        page=page, per_page=10, error_out=False
+    )
+    
+    return render_template('patients.html', patients=patients, search=search)
+
+@app.route('/patient/<int:patient_id>')
+@login_required
+def patient_detail(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    appointments = Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.appointment_date.desc()).all()
+    visits = PatientVisit.query.filter_by(patient_id=patient_id).order_by(PatientVisit.visit_date.desc()).all()
+    
+    return render_template('patient_detail.html', 
+                         patient=patient, 
+                         appointments=appointments, 
+                         visits=visits)
+
+@app.route('/add_patient', methods=['GET', 'POST'])
+@login_required
+def add_patient():
+    if request.method == 'POST':
+        try:
+            # Generate patient ID
+            year = datetime.now().year
+            last_patient = Patient.query.order_by(Patient.id.desc()).first()
+            new_id = f"MW{year}{str(last_patient.id + 1 if last_patient else 1).zfill(4)}"
+            
+            patient = Patient(
+                patient_id=new_id,
+                first_name=request.form.get('first_name'),
+                last_name=request.form.get('last_name'),
+                phone_number=request.form.get('phone_number'),
+                id_number=request.form.get('id_number'),
+                date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d') if request.form.get('date_of_birth') else None,
+                gender=request.form.get('gender'),
+                address=request.form.get('address'),
+                emergency_contact=request.form.get('emergency_contact'),
+                emergency_name=request.form.get('emergency_name'),
+                medical_aid=request.form.get('medical_aid'),
+                medical_aid_number=request.form.get('medical_aid_number'),
+                language_preference=request.form.get('language_preference', 'english'),
+                allergies=request.form.get('allergies'),
+                chronic_conditions=request.form.get('chronic_conditions'),
+                blood_type=request.form.get('blood_type'),
+                source='manual'
+            )
+            
+            db.session.add(patient)
+            db.session.commit()
+            flash('Patient added successfully!', 'success')
+            return redirect(url_for('patient_detail', patient_id=patient.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error adding patient: {str(e)}', 'error')
+    
+    return render_template('add_patient.html')
+
+@app.route('/appointments')
+@login_required
+def appointments():
+    page = request.args.get('page', 1, type=int)
+    date_filter = request.args.get('date', '')
+    
+    query = Appointment.query
+    
+    if date_filter:
+        try:
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            query = query.filter(Appointment.appointment_date == filter_date)
+        except ValueError:
+            pass
+    
+    appointments = query.order_by(Appointment.appointment_date.desc(), Appointment.appointment_time.desc()).paginate(
+        page=page, per_page=15, error_out=False
+    )
+    
+    return render_template('appointments.html', appointments=appointments, date_filter=date_filter)
+
+# Add error handler
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('error.html', error=error), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('error.html', error=error), 500
 
 @app.route('/patients')
 @login_required
