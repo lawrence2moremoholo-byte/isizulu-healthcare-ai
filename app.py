@@ -344,37 +344,28 @@ def is_within_business_hours():
     return start_time <= current_time <= end_time
 
 def get_available_days(language='english'):
-    """Get available appointment days (next 7 days excluding Sundays)"""
+    """Get available appointment days in the selected language"""
     today = datetime.now()
     available_days = []
     
     for i in range(1, 8):  # Next 7 days
         future_date = today + timedelta(days=i)
-        day_name = future_date.strftime("%A")
+        day_name_en = future_date.strftime("%A")
         
-        # Skip Sundays and non-clinic days
-        if day_name == "Sunday" or day_name not in CLINIC_HOURS["days"]:
+        # Skip Sundays
+        if day_name_en == "Sunday":
             continue
             
-        # Check if we haven't reached maximum appointments for the day
+        # Check appointment availability
         appointments_count = Appointment.query.filter(
             Appointment.appointment_date == future_date.date(),
             Appointment.status.in_(['scheduled', 'confirmed'])
         ).count()
         
         if appointments_count < 20:  # Max 20 appointments per day
-            # Translate day name based on language
-            day_translation = day_name  # Default to English
-            if language == 'zulu':
-                zulu_days = {'Monday': 'Msombuluko', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu', 
-                            'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo'}
-                day_translation = zulu_days.get(day_name, day_name)
-            elif language == 'afrikaans':
-                afrikaans_days = {'Monday': 'Maandag', 'Tuesday': 'Dinsdag', 'Wednesday': 'Woensdag',
-                                 'Thursday': 'Donderdag', 'Friday': 'Vrydag', 'Saturday': 'Saterdag'}
-                day_translation = afrikaans_days.get(day_name, day_name)
-                
-            available_days.append(day_translation)
+            # Translate day name to selected language
+            day_translated = LANGUAGE_DAYS.get(language, {}).get(day_name_en, day_name_en)
+            available_days.append(day_translated)
     
     return available_days
 
