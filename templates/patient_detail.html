@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Patient Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+            <div class="flex items-center space-x-4">
+                <div class="h-16 w-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ patient.first_name }} {{ patient.last_name }}</h1>
+                    <p class="text-gray-600">Patient ID: {{ patient.patient_id }} • ID Number: {{ patient.id_number }}</p>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="quickCheckin({{ patient.id }})" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200">
+                    <i class="fas fa-check-circle mr-2"></i>Quick Check-in
+                </button>
+                <a href="{{ url_for('add_patient') }}" 
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                    <i class="fas fa-edit mr-2"></i>Edit
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Patient Information -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Basic Info -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Basic Information</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Phone:</span>
+                        <span class="font-medium">{{ patient.phone_number }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Date of Birth:</span>
+                        <span class="font-medium">{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient.date_of_birth else 'Not set' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Gender:</span>
+                        <span class="font-medium">{{ patient.gender or 'Not set' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Language:</span>
+                        <span class="font-medium">{{ patient.language_preference }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical Info -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Medical Information</h2>
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-gray-600">Blood Type:</span>
+                        <span class="font-medium ml-2">{{ patient.blood_type or 'Not set' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Allergies:</span>
+                        <div class="font-medium">{{ patient.allergies or 'None recorded' }}</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-600">Chronic Conditions:</span>
+                        <div class="font-medium">{{ patient.chronic_conditions or 'None recorded' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Emergency Contact</h2>
+                <div class="space-y-2">
+                    <div class="font-medium">{{ patient.emergency_name or 'Not set' }}</div>
+                    <div class="text-gray-600">{{ patient.emergency_contact or 'No contact number' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medical History & Visits -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button class="p-4 bg-white rounded-2xl shadow-lg border-2 border-blue-200 hover:border-blue-400 transition duration-200">
+                    <i class="fas fa-stethoscope text-blue-600 text-xl mb-2"></i>
+                    <div class="font-semibold">New Visit</div>
+                </button>
+                <button class="p-4 bg-white rounded-2xl shadow-lg border-2 border-green-200 hover:border-green-400 transition duration-200">
+                    <i class="fas fa-calendar-plus text-green-600 text-xl mb-2"></i>
+                    <div class="font-semibold">Book Appointment</div>
+                </button>
+                <button class="p-4 bg-white rounded-2xl shadow-lg border-2 border-purple-200 hover:border-purple-400 transition duration-200">
+                    <i class="fas fa-prescription text-purple-600 text-xl mb-2"></i>
+                    <div class="font-semibold">Add Prescription</div>
+                </button>
+            </div>
+
+            <!-- Visit History -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Visit History</h2>
+                <div class="space-y-4">
+                    {% for visit in visits %}
+                    <div class="border-l-4 border-blue-500 pl-4 py-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-semibold">{{ visit.visit_date.strftime('%Y-%m-%d') }} • {{ visit.visit_type|title }}</div>
+                                <div class="text-sm text-gray-600">{{ visit.chief_complaint or 'General check-up' }}</div>
+                                {% if visit.diagnosis %}
+                                <div class="text-sm mt-1"><span class="font-medium">Diagnosis:</span> {{ visit.diagnosis }}</div>
+                                {% endif %}
+                            </div>
+                            <span class="px-2 py-1 rounded-full text-xs 
+                                {% if visit.status == 'completed' %}bg-green-100 text-green-800
+                                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {{ visit.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-center py-4">No visit history recorded</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Upcoming Appointments -->
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Upcoming Appointments</h2>
+                <div class="space-y-3">
+                    {% for appointment in appointments %}
+                    <div class="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                            <div class="font-semibold">{{ appointment.appointment_date.strftime('%Y-%m-%d') }} at {{ appointment.appointment_time }}</div>
+                            <div class="text-sm text-gray-600">{{ appointment.purpose or 'Appointment' }}</div>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-xs 
+                            {% if appointment.status == 'confirmed' %}bg-green-100 text-green-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ appointment.status }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-center py-4">No upcoming appointments</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function quickCheckin(patientId) {
+    fetch(`/quick_checkin/${patientId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Patient checked in successfully!');
+                window.location.reload();
+            }
+        });
+}
+</script>
+{% endblock %}
