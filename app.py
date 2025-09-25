@@ -461,7 +461,7 @@ def create_appointment_from_whatsapp(patient_id, day, time, language='english'):
         patient_id=patient_id,
         appointment_date=appointment_date,
         appointment_time=time,
-        purpose="Booking via WhatsApp",
+        reason="Booking via WhatsApp",
         status='scheduled',
         source='whatsapp',
         language=language
@@ -481,7 +481,7 @@ def handle_language_selection(message, state_data, phone_number):
         '5': 'sotho', 'sotho': 'sotho', 'sesotho': 'sotho',
         '6': 'tswana', 'tswana': 'tswana', 'setswana': 'tswana',
         '7': 'tsonga', 'tsonga': 'tsonga', 'xitsonga': 'tsonga',
-        '8': 'swati', 'swati': 'swati', 'siswati': 'swati', 'siswati': 'swati',
+        '8': 'swati', 'swati': 'swati', 'siswati': 'swati',
         '9': 'venda', 'venda': 'venda', 'tshivenda': 'venda',
         '10': 'ndebele', 'ndebele': 'ndebele', 'isindebele': 'ndebele',
         '11': 'pedi', 'pedi': 'pedi', 'sepedi': 'pedi'
@@ -604,7 +604,19 @@ def process_whatsapp_message(message, phone_number):
     else:
         return WHATSAPP_RESPONSES[state_data['language']]['invalid_choice']
 
-# Updated WhatsApp Webhook Route (Replace the existing one)
+def get_outside_hours_response(phone_number, message):
+    """Handle messages outside business hours"""
+    current_lang = 'english'
+    if phone_number in whatsapp_conversations:
+        current_lang = whatsapp_conversations[phone_number]['language']
+    
+    # Still process the message but indicate after-hours
+    booking_response = process_whatsapp_message(message, phone_number)
+    after_hours_msg = WHATSAPP_RESPONSES[current_lang]['after_hours']
+    
+    return f"{after_hours_msg}\\n\\n---\\n\\n{booking_response}"
+
+# SINGLE WhatsApp Webhook Route (Duplicate removed)
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
     try:
@@ -615,24 +627,17 @@ def whatsapp_webhook():
         
         # Check if outside business hours
         if not is_within_business_hours():
-            if from_number not in whatsapp_conversations:
-                # First message outside hours
-                current_lang = whatsapp_conversations[from_number]['language'] if from_number in whatsapp_conversations else 'english'
-                response = WHATSAPP_RESPONSES[current_lang]['after_hours']
-                
-                # Still process the message but indicate after-hours
-                booking_response = process_whatsapp_message(incoming_msg, from_number)
-                return f'<Response><Message>{response}\\n\\n---\\n\\n{booking_response}</Message></Response>'
+            response = get_outside_hours_response(from_number, incoming_msg)
+        else:
+            response = process_whatsapp_message(incoming_msg, from_number)
         
-        # Process message normally
-        response = process_whatsapp_message(incoming_msg, from_number)
         return f'<Response><Message>{response}</Message></Response>'
         
     except Exception as e:
         logger.error(f"WhatsApp webhook error: {str(e)}")
         # Fallback response
         return '<Response><Message>🚨 System temporarily unavailable. Please try again in a few moments.</Message></Response>'
-        
+
 # Routes
 @app.route('/')
 def index():
@@ -703,11 +708,11 @@ def dashboard():
         
         return render_template('dashboard.html',
                              stats=stats,
-                             todays_appointments=recent_appointments,  # Fixed variable name
+                             todays_appointments=recent_appointments,
                              recent_patients=Patient.query.order_by(Patient.created_at.desc()).limit(5).all(),
                              recent_whatsapp=recent_whatsapp,
                              today=datetime.today().date(),
-                             total_patients=total_patients,  # Keep individual variables for backward compatibility
+                             total_patients=total_patients,
                              today_appointments=today_appointments,
                              upcoming_appointments=upcoming_appointments,
                              language_stats=language_stats)
@@ -921,35 +926,6 @@ def add_appointment():
     
     patients = Patient.query.order_by(Patient.first_name, Patient.last_name).all()
     return render_template('add_appointment.html', patients=patients, datetime=datetime)
-
-# Enhanced WhatsApp conversation states
-
-@app.route('/whatsapp', methods=['POST'])
-def whatsapp_webhook():
-    try:
-        incoming_msg = request.values.get('Body', '').strip()
-        from_number = request.values.get('From', '').replace('whatsapp:', '')
-        
-        logger.info(f"WhatsApp message from {from_number}: {incoming_msg}")
-        
-        # Check if outside business hours (9pm to 6am)
-        current_time = datetime.now().time()
-        start_time = datetime.strptime(CLINIC_HOURS["start"], "%H:%M").time()
-        end_time = datetime.strptime(CLINIC_HOURS["end"], "%H:%M").time()
-        
-        if current_time < start_time or current_time > end_time:
-            response = get_outside_hours_response(from_number, incoming_msg)
-        else:
-            response = process_whatsapp_message(incoming_msg, from_number)
-        
-        return f'<Response><Message>{response}</Message></Response>'
-        
-    except Exception as e:
-        logger.error(f"WhatsApp webhook error: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-def get_outside_hours_response(phone_number, message):
-    """Handle messages outside business hours"""
 
 # API endpoints for statistics
 @app.route('/api/stats')
