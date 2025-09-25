@@ -1,1 +1,7 @@
-
+{
+  "patients": {},
+  "conversations": {},
+  "bookings": [],
+  "blocks": {},
+  "greeting_counts": {}
+}
