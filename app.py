@@ -167,6 +167,362 @@ def init_db():
 # Initialize database immediately when app starts
 init_db()
 
+# WhatsApp Configuration
+CLINIC_HOURS = {
+    "start": "06:00",  # 6 AM
+    "end": "21:00",    # 9 PM
+    "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+}
+
+# WhatsApp conversation states (in-memory storage)
+whatsapp_conversations = {}
+
+# Multilingual Responses Configuration
+WHATSAPP_RESPONSES = {
+    'english': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nPlease choose your language:\n\n1. English\n2. isiZulu\n3. Afrikaans\n4. isiXhosa\n\n*Reply with the number* of your preferred language",
+        'greeting': "Hello! 👋 Thank you for contacting MetaWell AI Clinic. Would you like to book a medical appointment? (Reply *YES* or *NO*)",
+        'show_days': "📅 *Available Appointment Days:*\n\n{days}\n\nWhich day would you prefer? (Reply with the day name)",
+        'choose_day': "Great! You chose *{day}*. Checking available time slots...",
+        'show_slots': "⏰ *Available Times on {day}:*\n\n{slots}\n\nPlease reply with your preferred time (e.g., 09:00)",
+        'booking_success': "✅ *Appointment Confirmed!*\n\n📅 Date: {day}\n⏰ Time: {time}\n📍 Clinic: MetaWell AI Clinic\n📋 Purpose: General Consultation\n\nPlease arrive 15 minutes early with your ID document. We look forward to seeing you!",
+        'emergency_advice': "🚨 *Emergency Notice:*\n\nIf this is a medical emergency, please:\n• Visit your nearest hospital immediately\n• Call 10111 for ambulance\n• Go to the emergency room\n\n*Your safety is our priority!*",
+        'after_hours': "🏥 *MetaWell AI Clinic - After Hours*\n\nThank you for your message! Our clinic is currently closed.\n\n*Clinic Hours:*\n🕘 Monday-Friday: 6:00 AM - 9:00 PM\n🕘 Saturday: 8:00 AM - 5:00 PM\n❌ Sunday: Closed\n\nWe'll respond to your message during our next business hours.",
+        'goodbye': "Thank you for contacting MetaWell AI Clinic! Stay healthy! 🌟",
+        'invalid_choice': "❌ I didn't understand that. Please try again with a valid option.",
+        'yes': ['yes', 'y', 'yeah', 'yebo', 'ya'],
+        'no': ['no', 'n', 'nah', 'cha']
+    },
+    'zulu': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nSicela ukhethe ulimi:\n\n1. isiZulu\n2. English\n3. Afrikaans\n4. isiXhosa\n\n*Phendula ngenombolo* yolimi oluthandayo",
+        'greeting': "Sawubona! 👋 Ngiyabonga ukuxhumana ne-MetaWell AI Clinic. Ingabe ufuna ukubhuka isikhathi sokwelapha? (Phendula *YEBO* noma *CHA*)",
+        'show_days': "📅 *Izinsuku Ezitholakalayo:*\n\n{days}\n\nUfuna usuku luni? (Phendula ngeligama lousuku)",
+        'choose_day': "Kuhle! Ukhethe u-*{day}*. Ngibheka izikhathi ezitholakalayo...",
+        'show_slots': "⏰ *Izikhathi ku-{day}:*\n\n{slots}\n\nSicela uphendule ngesikhathi osithandayo (isib. 09:00)",
+        'booking_success': "✅ *Isikhathi Siqinisekisiwe!*\n\n📅 Usuku: {day}\n⏰ Isikhathi: {time}\n📍 Isibhedlela: MetaWell AI Clinic\n📋 Inhloso: Ukuxilongwa Okujwayelekile\n\nSicela ufike imizuzu engu-15 ngaphambi kwesikhathi. Siyakulindile!",
+        'goodbye': "Ngiyabonga ukuxhumana ne-MetaWell AI Clinic! Sala uphile! 🌟",
+        'yes': ['yebo', 'y', 'ya'],
+        'no': ['cha', 'c', 'hayi']
+    },
+    'afrikaans': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKies asseblief jou taal:\n\n1. Afrikaans\n2. English\n3. isiZulu\n4. isiXhosa\n\n*Antwoord met die nommer* van jou voorkeurtaal",
+        'greeting': "Hallo! 👋 Dankie dat jy MetaWell AI Clinic gekontak het. Wil jy 'n afspraak maak? (Antwoord *JA* of *NEE*)",
+        'show_days': "📅 *Beskikbare Afspraakdae:*\n\n{days}\n\nWatter dag verkies jy? (Antwoord met die dag naam)",
+        'booking_success': "✅ *Afspraak Bevestig!*\n\n📅 Datum: {day}\n⏰ Tyd: {time}\n📍 Kliniek: MetaWell AI Clinic\n\nWees asseblief 15 minute vroeg met jou ID-dokument.",
+        'goodbye': "Dankie vir die kontak! Bly gesond! 🌟",
+        'yes': ['ja', 'j', 'y'],
+        'no': ['nee', 'n', 'ne']
+    }
+}
+
+def is_within_business_hours():
+    """Check if current time is within clinic hours"""
+    now = datetime.now()
+    current_time = now.time()
+    
+    # Parse clinic hours
+    start_time = datetime.strptime(CLINIC_HOURS["start"], "%H:%M").time()
+    end_time = datetime.strptime(CLINIC_HOURS["end"], "%H:%M").time()
+    
+    # Check if current day is a clinic day
+    current_day = now.strftime("%A")
+    if current_day not in CLINIC_HOURS["days"]:
+        return False
+    
+    return start_time <= current_time <= end_time
+
+def get_available_days(language='english'):
+    """Get available appointment days (next 7 days excluding Sundays)"""
+    today = datetime.now()
+    available_days = []
+    
+    for i in range(1, 8):  # Next 7 days
+        future_date = today + timedelta(days=i)
+        day_name = future_date.strftime("%A")
+        
+        # Skip Sundays and non-clinic days
+        if day_name == "Sunday" or day_name not in CLINIC_HOURS["days"]:
+            continue
+            
+        # Check if we haven't reached maximum appointments for the day
+        appointments_count = Appointment.query.filter(
+            Appointment.appointment_date == future_date.date(),
+            Appointment.status.in_(['scheduled', 'confirmed'])
+        ).count()
+        
+        if appointments_count < 20:  # Max 20 appointments per day
+            # Translate day name based on language
+            day_translation = day_name  # Default to English
+            if language == 'zulu':
+                zulu_days = {'Monday': 'Msombuluko', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu', 
+                            'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo'}
+                day_translation = zulu_days.get(day_name, day_name)
+            elif language == 'afrikaans':
+                afrikaans_days = {'Monday': 'Maandag', 'Tuesday': 'Dinsdag', 'Wednesday': 'Woensdag',
+                                 'Thursday': 'Donderdag', 'Friday': 'Vrydag', 'Saturday': 'Saterdag'}
+                day_translation = afrikaans_days.get(day_name, day_name)
+                
+            available_days.append(day_translation)
+    
+    return available_days
+
+def get_available_slots(day, language='english'):
+    """Get available time slots for a specific day"""
+    # Map day names back to English for processing
+    day_mapping = {
+        'zulu': {'Msombuluko': 'Monday', 'Lwesibili': 'Tuesday', 'Lwesithathu': 'Wednesday',
+                'Lwesine': 'Thursday', 'Lwesihlanu': 'Friday', 'Mgqibelo': 'Saturday'},
+        'afrikaans': {'Maandag': 'Monday', 'Dinsdag': 'Tuesday', 'Woensdag': 'Wednesday',
+                     'Donderdag': 'Thursday', 'Vrydag': 'Friday', 'Saterdag': 'Saturday'}
+    }
+    
+    day_english = day
+    for lang, days_map in day_mapping.items():
+        if day in days_map:
+            day_english = days_map[day]
+            break
+    
+    # Standard time slots
+    all_slots = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"]
+    
+    # Find the actual date for the selected day
+    today = datetime.now()
+    for i in range(1, 8):
+        future_date = today + timedelta(days=i)
+        if future_date.strftime("%A") == day_english:
+            target_date = future_date.date()
+            break
+    else:
+        return []
+    
+    # Get booked slots for that day
+    booked_slots = [appt.appointment_time for appt in Appointment.query.filter(
+        Appointment.appointment_date == target_date,
+        Appointment.status.in_(['scheduled', 'confirmed'])
+    ).all()]
+    
+    # Return available slots
+    return [slot for slot in all_slots if slot not in booked_slots]
+
+def create_patient_from_whatsapp(phone_number, language='english'):
+    """Create or find patient from WhatsApp booking"""
+    patient = Patient.query.filter_by(phone_number=phone_number).first()
+    
+    if not patient:
+        # Generate patient ID
+        year = datetime.now().year
+        last_patient = Patient.query.order_by(Patient.id.desc()).first()
+        last_id = last_patient.id if last_patient else 0
+        new_id = f"MW{year}{str(last_id + 1).zfill(4)}"
+        
+        patient = Patient(
+            patient_id=new_id,
+            phone_number=phone_number,
+            first_name="WhatsApp",
+            last_name="Patient",
+            language_preference=language,
+            source='whatsapp'
+        )
+        db.session.add(patient)
+        db.session.commit()
+    
+    return patient
+
+def create_appointment_from_whatsapp(patient_id, day, time, language='english'):
+    """Create appointment from WhatsApp booking"""
+    # Map day back to English
+    day_mapping = {
+        'zulu': {'Msombuluko': 'Monday', 'Lwesibili': 'Tuesday', 'Lwesithathu': 'Wednesday',
+                'Lwesine': 'Thursday', 'Lwesihlanu': 'Friday', 'Mgqibelo': 'Saturday'},
+        'afrikaans': {'Maandag': 'Monday', 'Dinsdag': 'Tuesday', 'Woensdag': 'Wednesday',
+                     'Donderdag': 'Thursday', 'Vrydag': 'Friday', 'Saterdag': 'Saturday'}
+    }
+    
+    day_english = day
+    for lang, days_map in day_mapping.items():
+        if day in days_map:
+            day_english = days_map[day]
+            break
+    
+    # Find the actual date
+    today = datetime.now()
+    for i in range(1, 8):
+        future_date = today + timedelta(days=i)
+        if future_date.strftime("%A") == day_english:
+            appointment_date = future_date.date()
+            break
+    else:
+        appointment_date = today.date() + timedelta(days=1)
+    
+    appointment = Appointment(
+        patient_id=patient_id,
+        appointment_date=appointment_date,
+        appointment_time=time,
+        purpose="Booking via WhatsApp",
+        status='scheduled',
+        source='whatsapp',
+        language=language
+    )
+    
+    db.session.add(appointment)
+    db.session.commit()
+    return appointment
+
+def handle_language_selection(message, state_data, phone_number):
+    """Handle language selection step"""
+    language_choices = {
+        '1': 'english', 'english': 'english',
+        '2': 'zulu', 'zulu': 'zulu', 'isizulu': 'zulu',
+        '3': 'afrikaans', 'afrikaans': 'afrikaans',
+        '4': 'xhosa', 'xhosa': 'xhosa', 'isixhosa': 'xhosa'
+    }
+    
+    if message.lower() in language_choices:
+        state_data['language'] = language_choices[message.lower()]
+        state_data['state'] = 'GREETING'
+        return WHATSAPP_RESPONSES[state_data['language']]['greeting']
+    else:
+        # Default to English
+        state_data['language'] = 'english'
+        state_data['state'] = 'GREETING'
+        return WHATSAPP_RESPONSES['english']['greeting']
+
+def handle_greeting(message, state_data, phone_number):
+    """Handle initial greeting and appointment intent"""
+    lang_config = WHATSAPP_RESPONSES[state_data['language']]
+    
+    if any(word in message.lower() for word in lang_config['yes']):
+        state_data['state'] = 'DAY_SELECTION'
+        available_days = get_available_days(state_data['language'])
+        days_text = "\n".join([f"• {day}" for day in available_days])
+        return lang_config['show_days'].format(days=days_text)
+    elif any(word in message.lower() for word in lang_config['no']):
+        if phone_number in whatsapp_conversations:
+            del whatsapp_conversations[phone_number]
+        return lang_config['goodbye']
+    else:
+        return lang_config['invalid_choice']
+
+def handle_day_selection(message, state_data, phone_number):
+    """Handle day selection step"""
+    lang_config = WHATSAPP_RESPONSES[state_data['language']]
+    available_days = get_available_days(state_data['language'])
+    
+    # Check if message matches any available day
+    selected_day = None
+    for day in available_days:
+        if day.lower() in message.lower():
+            selected_day = day
+            break
+    
+    if selected_day:
+        state_data['booking_data']['day'] = selected_day
+        state_data['state'] = 'TIME_SELECTION'
+        return lang_config['choose_day'].format(day=selected_day)
+    else:
+        days_text = "\n".join([f"• {day}" for day in available_days])
+        return lang_config['show_days'].format(days=days_text)
+
+def handle_time_selection(message, state_data, phone_number):
+    """Handle time selection step"""
+    lang_config = WHATSAPP_RESPONSES[state_data['language']]
+    selected_day = state_data['booking_data'].get('day')
+    
+    if not selected_day:
+        state_data['state'] = 'DAY_SELECTION'
+        available_days = get_available_days(state_data['language'])
+        days_text = "\n".join([f"• {day}" for day in available_days])
+        return lang_config['show_days'].format(days=days_text)
+    
+    available_slots = get_available_slots(selected_day, state_data['language'])
+    
+    # Check if message matches any available time slot
+    selected_time = None
+    for slot in available_slots:
+        if slot in message or slot.replace(':00', '') in message:
+            selected_time = slot
+            break
+    
+    if selected_time:
+        # Create patient and appointment
+        patient = create_patient_from_whatsapp(phone_number, state_data['language'])
+        appointment = create_appointment_from_whatsapp(
+            patient.id, selected_day, selected_time, state_data['language']
+        )
+        
+        state_data['patient_id'] = patient.id
+        state_data['state'] = 'COMPLETED'
+        
+        # Clean up conversation after completion
+        if phone_number in whatsapp_conversations:
+            del whatsapp_conversations[phone_number]
+        
+        return lang_config['booking_success'].format(
+            day=selected_day, 
+            time=selected_time
+        )
+    else:
+        slots_text = "\n".join([f"• {slot}" for slot in available_slots])
+        return lang_config['show_slots'].format(day=selected_day, slots=slots_text)
+
+def process_whatsapp_message(message, phone_number):
+    """Main function to process WhatsApp messages"""
+    msg_lower = message.lower().strip()
+    
+    # Initialize conversation state if new
+    if phone_number not in whatsapp_conversations:
+        whatsapp_conversations[phone_number] = {
+            'state': 'LANGUAGE_SELECTION',
+            'language': 'english',
+            'patient_id': None,
+            'booking_data': {},
+            'last_active': datetime.now()
+        }
+    
+    state_data = whatsapp_conversations[phone_number]
+    current_state = state_data['state']
+    
+    # Route to appropriate handler based on current state
+    if current_state == 'LANGUAGE_SELECTION':
+        return handle_language_selection(msg_lower, state_data, phone_number)
+    elif current_state == 'GREETING':
+        return handle_greeting(msg_lower, state_data, phone_number)
+    elif current_state == 'DAY_SELECTION':
+        return handle_day_selection(msg_lower, state_data, phone_number)
+    elif current_state == 'TIME_SELECTION':
+        return handle_time_selection(msg_lower, state_data, phone_number)
+    else:
+        return WHATSAPP_RESPONSES[state_data['language']]['invalid_choice']
+
+# Updated WhatsApp Webhook Route (Replace the existing one)
+@app.route('/whatsapp', methods=['POST'])
+def whatsapp_webhook():
+    try:
+        incoming_msg = request.values.get('Body', '').strip()
+        from_number = request.values.get('From', '').replace('whatsapp:', '')
+        
+        logger.info(f"WhatsApp message from {from_number}: {incoming_msg}")
+        
+        # Check if outside business hours
+        if not is_within_business_hours():
+            if from_number not in whatsapp_conversations:
+                # First message outside hours
+                current_lang = whatsapp_conversations[from_number]['language'] if from_number in whatsapp_conversations else 'english'
+                response = WHATSAPP_RESPONSES[current_lang]['after_hours']
+                
+                # Still process the message but indicate after-hours
+                booking_response = process_whatsapp_message(incoming_msg, from_number)
+                return f'<Response><Message>{response}\\n\\n---\\n\\n{booking_response}</Message></Response>'
+        
+        # Process message normally
+        response = process_whatsapp_message(incoming_msg, from_number)
+        return f'<Response><Message>{response}</Message></Response>'
+        
+    except Exception as e:
+        logger.error(f"WhatsApp webhook error: {str(e)}")
+        # Fallback response
+        return '<Response><Message>🚨 System temporarily unavailable. Please try again in a few moments.</Message></Response>'
+        
 # Routes
 @app.route('/')
 def index():
@@ -456,24 +812,140 @@ def add_appointment():
     patients = Patient.query.order_by(Patient.first_name, Patient.last_name).all()
     return render_template('add_appointment.html', patients=patients, datetime=datetime)
 
-# WhatsApp webhook endpoint
+# Enhanced WhatsApp conversation states
+whatsapp_conversations = {}
+CLINIC_HOURS = {"start": "06:00", "end": "21:00"}  # 6am to 9pm
+
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
     try:
-        # Basic WhatsApp webhook implementation
         incoming_msg = request.values.get('Body', '').strip()
         from_number = request.values.get('From', '').replace('whatsapp:', '')
         
         logger.info(f"WhatsApp message from {from_number}: {incoming_msg}")
         
-        # Placeholder response
-        response = "Thank you for your message. Our clinic will respond shortly."
+        # Check if outside business hours (9pm to 6am)
+        current_time = datetime.now().time()
+        start_time = datetime.strptime(CLINIC_HOURS["start"], "%H:%M").time()
+        end_time = datetime.strptime(CLINIC_HOURS["end"], "%H:%M").time()
+        
+        if current_time < start_time or current_time > end_time:
+            response = get_outside_hours_response(from_number, incoming_msg)
+        else:
+            response = process_whatsapp_message(incoming_msg, from_number)
         
         return f'<Response><Message>{response}</Message></Response>'
         
     except Exception as e:
         logger.error(f"WhatsApp webhook error: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+def get_outside_hours_response(phone_number, message):
+    """Handle messages outside business hours"""
+    if phone_number not in whatsapp_conversations:
+        # First message outside hours - provide helpful response
+        return """🏥 *MetaWell AI Clinic - After Hours*
+
+Thank you for your message! Our clinic is currently closed.
+
+*Clinic Hours:*
+🕘 Monday-Friday: 6:00 AM - 9:00 PM
+🕘 Saturday: 8:00 AM - 5:00 PM
+❌ Sunday: Closed
+
+We'll respond to your message during our next business hours. For medical emergencies, please visit your nearest hospital or call 10111.
+
+*Your message:* \"{}\"
+
+We look forward to assisting you tomorrow! 🌟""".format(message)
+    else:
+        # Continue existing conversation with after-hours notice
+        response = process_whatsapp_message(message, phone_number)
+        return response + "\n\n📋 *Note:* Clinic is currently closed. We'll confirm your booking tomorrow."
+
+def process_whatsapp_message(message, phone_number):
+    """Process multilingual WhatsApp booking flow"""
+    msg_lower = message.lower().strip()
+    
+    # Initialize or get conversation state
+    if phone_number not in whatsapp_conversations:
+        whatsapp_conversations[phone_number] = {
+            'state': 'LANGUAGE_SELECTION',
+            'language': 'english',
+            'patient_id': None,
+            'booking_data': {},
+            'last_active': datetime.now()
+        }
+    
+    state_data = whatsapp_conversations[phone_number]
+    current_state = state_data['state']
+    current_language = state_data['language']
+    
+    # Multilingual responses configuration
+    responses = {
+        'english': {
+            'welcome': "🏥 *MetaWell AI Clinic*\n\nPlease choose your language:\n\n1. English\n2. isiZulu\n3. Afrikaans\n4. isiXhosa\n\n*Reply with the number* of your preferred language",
+            'greeting': "Hello! 👋 Thank you for contacting MetaWell AI Clinic. Would you like to book a medical appointment? (Reply *YES* or *NO*)",
+            'show_days': "📅 *Available Appointment Days:*\n\n{days}\n\nWhich day would you prefer?",
+            'choose_day': "Great! You chose *{day}*. Checking available time slots...",
+            'show_slots': "⏰ *Available Times on {day}:*\n\n{slots}\n\nPlease reply with your preferred time (e.g., 09:00)",
+            'booking_success': "✅ *Appointment Confirmed!*\n\n📅 Date: {day}\n⏰ Time: {time}\n📍 Clinic: MetaWell AI Clinic\n📋 Purpose: {purpose}\n\nPlease arrive 15 minutes early with your ID document.",
+            'emergency_advice': "🚨 *Emergency Notice:*\n\nIf this is a medical emergency, please:\n• Visit your nearest hospital immediately\n• Call 10111 for ambulance\n• Go to the emergency room\n\n*Your safety is our priority!*",
+            'goodbye': "Thank you for contacting MetaWell AI Clinic! Stay healthy! 🌟",
+            'invalid_choice': "❌ Invalid choice. Please try again."
+        },
+        'zulu': {
+            'welcome': "🏥 *MetaWell AI Clinic*\n\nSicela ukhethe ulimi:\n\n1. isiZulu\n2. English\n3. Afrikaans\n4. isiXhosa\n\n*Phendula ngenombolo* yolimi oluthandayo",
+            'greeting': "Sawubona! 👋 Ngiyabonga ukuxhumana ne-MetaWell AI Clinic. Ingabe ufuna ukubhuka isikhathi sokwelapha? (Phendula *YEBO* noma *CHA*)",
+            # ... add other language responses
+        }
+    }
+    
+    # State machine for conversation flow
+    if current_state == 'LANGUAGE_SELECTION':
+        return handle_language_selection(msg_lower, state_data, responses)
+    elif current_state == 'GREETING':
+        return handle_greeting(msg_lower, state_data, responses[current_language])
+    elif current_state == 'DAY_SELECTION':
+        return handle_day_selection(msg_lower, state_data, responses[current_language])
+    elif current_state == 'TIME_SELECTION':
+        return handle_time_selection(msg_lower, state_data, responses[current_language])
+    elif current_state == 'CONFIRMATION':
+        return handle_confirmation(msg_lower, state_data, responses[current_language])
+    
+    return responses[current_language]['invalid_choice']
+
+def handle_language_selection(message, state_data, responses):
+    """Handle language selection step"""
+    language_map = {
+        '1': 'english', 'english': 'english',
+        '2': 'zulu', 'zulu': 'zulu', 
+        '3': 'afrikaans', 'afrikaans': 'afrikaans',
+        '4': 'xhosa', 'xhosa': 'xhosa'
+    }
+    
+    if message in language_map:
+        state_data['language'] = language_map[message]
+        state_data['state'] = 'GREETING'
+        return responses[state_data['language']]['greeting']
+    else:
+        # Default to English if not recognized
+        state_data['language'] = 'english'
+        state_data['state'] = 'GREETING'
+        return responses['english']['greeting']
+
+def handle_greeting(message, state_data, responses):
+    """Handle initial greeting and appointment intent"""
+    if any(word in message for word in ['yes', 'yebo', 'ja', 'y']):
+        state_data['state'] = 'DAY_SELECTION'
+        available_days = get_available_days(state_data['language'])
+        days_text = "\n".join([f"• {day}" for day in available_days])
+        return responses['show_days'].format(days=days_text)
+    else:
+        del whatsapp_conversations[state_data['phone_number']]
+        return responses['goodbye']
+
+# Add similar handler functions for day selection, time selection, and confirmation
 
 # API endpoints for statistics
 @app.route('/api/stats')
