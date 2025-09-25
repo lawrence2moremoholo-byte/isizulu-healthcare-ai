@@ -3,21 +3,21 @@
 {% block title %}Dashboard - MetaWell AI Clinic{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
     <p class="text-gray-600">Welcome to MetaWell AI Clinic Management System</p>
 </div>
 
-<!-- Statistics Cards -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-                <i class="fas fa-users text-2xl"></i>
+                <i class="fas fa-users text-xl"></i>
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Patients</p>
-                <p class="text-2xl font-semibold text-gray-900">{{ total_patients }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ stats.total_patients }}</p>
             </div>
         </div>
     </div>
@@ -25,88 +25,98 @@
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
             <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-                <i class="fas fa-calendar-day text-2xl"></i>
+                <i class="fas fa-calendar-check text-xl"></i>
             </div>
             <div>
                 <p class="text-sm font-medium text-gray-600">Today's Appointments</p>
-                <p class="text-2xl font-semibold text-gray-900">{{ today_appointments }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ stats.today_appointments }}</p>
             </div>
         </div>
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
         <div class="flex items-center">
-            <div class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
-                <i class="fas fa-calendar-check text-2xl"></i>
+            <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+                <i class="fab fa-whatsapp text-xl"></i>
             </div>
             <div>
-                <p class="text-sm font-medium text-gray-600">Upcoming Appointments</p>
-                <p class="text-2xl font-semibold text-gray-900">{{ upcoming_appointments }}</p>
+                <p class="text-sm font-medium text-gray-600">WhatsApp Bookings</p>
+                <p class="text-2xl font-bold text-gray-900">{{ stats.whatsapp_bookings }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
+                <i class="fas fa-stethoscope text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-gray-600">Today's Visits</p>
+                <p class="text-2xl font-bold text-gray-900">{{ stats.today_visits }}</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Appointments and Language Stats -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Recent Appointments -->
+<!-- Two Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Today's Appointments -->
     <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-800">Recent Appointments</h2>
+            <h3 class="text-lg font-medium text-gray-900">Today's Appointments</h3>
+            <p class="text-sm text-gray-600">{{ today.strftime('%B %d, %Y') }}</p>
         </div>
         <div class="p-6">
-            {% if recent_appointments %}
+            {% if todays_appointments %}
             <div class="space-y-4">
-                {% for appointment in recent_appointments %}
-                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                {% for appointment in todays_appointments %}
+                <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                     <div>
                         <p class="font-medium text-gray-900">
                             {{ appointment.patient.first_name }} {{ appointment.patient.last_name }}
                         </p>
                         <p class="text-sm text-gray-600">
-                            {{ appointment.appointment_date.strftime('%Y-%m-%d') }} at {{ appointment.appointment_time }}
+                            <i class="fas fa-clock mr-1"></i>{{ appointment.appointment_time }}
                         </p>
                     </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-medium 
-                        {% if appointment.status == 'scheduled' %}bg-yellow-100 text-yellow-800
-                        {% elif appointment.status == 'confirmed' %}bg-blue-100 text-blue-800
-                        {% elif appointment.status == 'completed' %}bg-green-100 text-green-800
-                        {% else %}bg-red-100 text-red-800{% endif %}">
-                        {{ appointment.status|title }}
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {{ appointment.status }}
                     </span>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-gray-500 text-center py-4">No recent appointments</p>
+            <p class="text-gray-500 text-center py-4">No appointments scheduled for today</p>
             {% endif %}
         </div>
     </div>
 
-    <!-- Language Statistics -->
+    <!-- Recent WhatsApp Patients -->
     <div class="bg-white rounded-lg shadow">
         <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-800">Language Usage</h2>
+            <h3 class="text-lg font-medium text-gray-900">Recent WhatsApp Patients</h3>
+            <p class="text-sm text-gray-600">Latest bookings via WhatsApp</p>
         </div>
         <div class="p-6">
-            {% if language_stats %}
-            <div class="space-y-3">
-                {% for lang, count in language_stats %}
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700">
-                        {{ LANGUAGES[lang].name if lang in LANGUAGES else lang|title }}
-                    </span>
-                    <span class="text-sm text-gray-600">{{ count }} appointments</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-blue-600 h-2 rounded-full" 
-                         style="width: {{ (count / total_patients * 100) if total_patients > 0 else 0 }}%">
+            {% if recent_whatsapp %}
+            <div class="space-y-4">
+                {% for patient in recent_whatsapp %}
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                        <p class="font-medium text-gray-900">{{ patient.first_name }} {{ patient.last_name }}</p>
+                        <p class="text-sm text-gray-600">
+                            <i class="fas fa-phone mr-1"></i>{{ patient.phone_number }}
+                        </p>
                     </div>
+                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                        WhatsApp
+                    </span>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-gray-500 text-center py-4">No language data available</p>
+            <p class="text-gray-500 text-center py-4">No WhatsApp patients yet</p>
             {% endif %}
         </div>
     </div>
@@ -115,22 +125,31 @@
 <!-- Quick Actions -->
 <div class="mt-8 bg-white rounded-lg shadow">
     <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-800">Quick Actions</h2>
+        <h3 class="text-lg font-medium text-gray-900">Quick Actions</h3>
     </div>
     <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="{{ url_for('add_patient') }}" class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200">
-            <i class="fas fa-user-plus text-blue-600 text-xl mr-3"></i>
-            <span class="font-medium text-blue-700">Add New Patient</span>
+        <a href="{{ url_for('add_patient') }}" class="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+            <i class="fas fa-user-plus text-2xl text-blue-600 mr-3"></i>
+            <div>
+                <p class="font-medium text-gray-900">Add New Patient</p>
+                <p class="text-sm text-gray-600">Manual patient registration</p>
+            </div>
         </a>
         
-        <a href="{{ url_for('appointments') }}" class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200">
-            <i class="fas fa-calendar-plus text-green-600 text-xl mr-3"></i>
-            <span class="font-medium text-green-700">Schedule Appointment</span>
+        <a href="{{ url_for('appointments') }}" class="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+            <i class="fas fa-calendar-plus text-2xl text-green-600 mr-3"></i>
+            <div>
+                <p class="font-medium text-gray-900">Schedule Appointment</p>
+                <p class="text-sm text-gray-600">Book new appointment</p>
+            </div>
         </a>
         
-        <a href="{{ url_for('patients') }}" class="flex items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition duration-200">
-            <i class="fas fa-search text-orange-600 text-xl mr-3"></i>
-            <span class="font-medium text-orange-700">Search Patients</span>
+        <a href="{{ url_for('patients') }}" class="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+            <i class="fas fa-search text-2xl text-purple-600 mr-3"></i>
+            <div>
+                <p class="font-medium text-gray-900">Patient Search</p>
+                <p class="text-sm text-gray-600">Find patient records</p>
+            </div>
         </a>
     </div>
 </div>
