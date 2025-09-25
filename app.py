@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response
+from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -166,6 +167,21 @@ def login():
             flash('Invalid username or password', 'error')
     
     return render_template('login.html')
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
+# REPLACE ERROR HANDLERS WITH THESE:
+@app.errorhandler(404)
+def not_found_error(error):
+    if request.path == '/favicon.ico':
+        return '', 204
+    return "Page not found - If you entered the URL manually please check your spelling and try again.", 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return "Internal server error - Please try again later.", 500
 
 @app.route('/logout')
 @login_required
