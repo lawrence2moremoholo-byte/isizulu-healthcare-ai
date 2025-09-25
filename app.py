@@ -337,6 +337,71 @@ def add_patient():
     
     return render_template('add_patient.html')
 
+@app.route('/edit_patient/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+def edit_patient(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    
+    if request.method == 'POST':
+        try:
+            patient.first_name = request.form.get('first_name')
+            patient.last_name = request.form.get('last_name')
+            patient.phone_number = request.form.get('phone_number')
+            patient.email = request.form.get('email')
+            patient.id_number = request.form.get('id_number')
+            patient.gender = request.form.get('gender')
+            patient.address = request.form.get('address')
+            patient.emergency_contact = request.form.get('emergency_contact')
+            patient.emergency_name = request.form.get('emergency_name')
+            patient.medical_aid = request.form.get('medical_aid')
+            patient.medical_aid_number = request.form.get('medical_aid_number')
+            patient.language_preference = request.form.get('language_preference', 'english')
+            patient.allergies = request.form.get('allergies')
+            patient.chronic_conditions = request.form.get('chronic_conditions')
+            patient.blood_type = request.form.get('blood_type')
+            
+            # Handle date of birth
+            dob = request.form.get('date_of_birth')
+            if dob:
+                patient.date_of_birth = datetime.strptime(dob, '%Y-%m-%d')
+            
+            db.session.commit()
+            flash('Patient information updated successfully!', 'success')
+            return redirect(url_for('patient_detail', patient_id=patient.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating patient: {str(e)}', 'error')
+    
+    return render_template('edit_patient.html', patient=patient)
+
+@app.route('/patient/<int:patient_id>/book_appointment', methods=['GET', 'POST'])
+@login_required
+def book_appointment_for_patient(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    
+    if request.method == 'POST':
+        try:
+            appointment = Appointment(
+                patient_id=patient_id,
+                appointment_date=datetime.strptime(request.form.get('appointment_date'), '%Y-%m-%d').date(),
+                appointment_time=request.form.get('appointment_time'),
+                reason=request.form.get('reason'),
+                notes=request.form.get('notes'),
+                language=request.form.get('language', patient.language_preference)
+            )
+            
+            db.session.add(appointment)
+            db.session.commit()
+            flash(f'Appointment booked successfully for {patient.first_name} {patient.last_name}!', 'success')
+            return redirect(url_for('patient_detail', patient_id=patient_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error booking appointment: {str(e)}', 'error')
+    
+    return render_template('book_appointment.html', patient=patient, datetime=datetime)
+
 @app.route('/appointments')
 @login_required
 def appointments():
