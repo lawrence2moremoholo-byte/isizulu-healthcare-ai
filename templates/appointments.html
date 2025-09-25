@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Appointment Schedule</h1>
+                <p class="text-gray-600">Manage today's appointments and schedules</p>
+            </div>
+            <div class="flex space-x-4">
+                <input type="date" value="{{ selected_date.strftime('%Y-%m-%d') }}" 
+                       onchange="window.location.href='{{ url_for('appointments') }}?date=' + this.value"
+                       class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Time Slots Column -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Time Slots</h2>
+                <div class="space-y-2">
+                    {% for time in ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00'] %}
+                    <div class="p-3 border rounded-lg text-center font-medium">
+                        {{ time }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments Column -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">
+                    Appointments for {{ selected_date.strftime('%A, %B %d, %Y') }}
+                </h2>
+                
+                {% if appointments %}
+                <div class="space-y-4">
+                    {% for appointment in appointments %}
+                    <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition duration-200">
+                        <div class="flex items-center space-x-4">
+                            <div class="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold">{{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</div>
+                                <div class="text-sm text-gray-600">
+                                    {{ appointment.appointment_time }} • {{ appointment.purpose or 'General check-up' }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Phone: {{ appointment.patient.phone_number }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center space-x-3">
+                            <span class="px-3 py-1 rounded-full text-sm font-medium
+                                {% if appointment.status == 'confirmed' %}bg-green-100 text-green-800
+                                {% elif appointment.status == 'scheduled' %}bg-yellow-100 text-yellow-800
+                                {% elif appointment.status == 'arrived' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ appointment.status }}
+                            </span>
+                            
+                            {% if appointment.status == 'scheduled' %}
+                            <a href="{{ url_for('confirm_appointment', appointment_id=appointment.id) }}" 
+                               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 text-sm">
+                                Confirm
+                            </a>
+                            {% endif %}
+                            
+                            <a href="{{ url_for('patient_detail', patient_id=appointment.patient.id) }}" 
+                               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 text-sm">
+                                View Patient
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-calendar-times text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg">No appointments scheduled for this date</p>
+                    <p class="text-sm text-gray-400">Appointments will appear here when booked via WhatsApp or manually</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Integration Info -->
+    <div class="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl shadow-lg p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold">WhatsApp Integration Active</h2>
+                <p class="opacity-90">Patients can book appointments directly via WhatsApp</p>
+            </div>
+            <div class="bg-white text-green-600 px-4 py-2 rounded-lg font-semibold">
+                <i class="fab fa-whatsapp mr-2"></i>Connected
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
