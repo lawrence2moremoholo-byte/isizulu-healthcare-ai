@@ -38,7 +38,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin, doctor, nurse, receptionist
+    role = db.Column(db.String(20), nullable=False, default='receptionist')  # admin, doctor, nurse, receptionist
+    full_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -54,12 +55,19 @@ class Patient(db.Model):
     last_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120))
+    id_number = db.Column(db.String(20))
     date_of_birth = db.Column(db.Date)
     gender = db.Column(db.String(10))
     address = db.Column(db.Text)
     emergency_contact = db.Column(db.String(100))
+    emergency_name = db.Column(db.String(100))
     medical_aid = db.Column(db.String(100))
     medical_aid_number = db.Column(db.String(50))
+    language_preference = db.Column(db.String(20), default='english')
+    allergies = db.Column(db.Text)
+    chronic_conditions = db.Column(db.Text)
+    blood_type = db.Column(db.String(5))
+    source = db.Column(db.String(20), default='manual')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -76,6 +84,7 @@ class Appointment(db.Model):
     reason = db.Column(db.Text)
     notes = db.Column(db.Text)
     language = db.Column(db.String(20), default='english')
+    source = db.Column(db.String(20), default='manual')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class PatientVisit(db.Model):
@@ -126,6 +135,9 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+        
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -133,9 +145,11 @@ def login():
         
         if user and user.check_password(password):
             login_user(user)
-            return redirect(url_for('dashboard'))
+            flash('Login successful!', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('dashboard'))
         else:
-            flash('Invalid username or password')
+            flash('Invalid username or password', 'error')
     
     return render_template('login.html')
 
@@ -169,7 +183,6 @@ def dashboard():
                          upcoming_appointments=upcoming_appointments,
                          recent_appointments=recent_appointments,
                          language_stats=language_stats)
-# Add these routes after the dashboard route
 
 @app.route('/logout')
 @login_required
@@ -206,11 +219,13 @@ def patient_detail(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     appointments = Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.appointment_date.desc()).all()
     visits = PatientVisit.query.filter_by(patient_id=patient_id).order_by(PatientVisit.visit_date.desc()).all()
+    medical_history = MedicalHistory.query.filter_by(patient_id=patient_id).all()
     
     return render_template('patient_detail.html', 
                          patient=patient, 
-                         appointments=appointments, 
-                         visits=visits)
+                         appointments=appointments,
+                         visits=visits,
+                         medical_history=medical_history)
 
 @app.route('/add_patient', methods=['GET', 'POST'])
 @login_required
@@ -227,6 +242,7 @@ def add_patient():
                 first_name=request.form.get('first_name'),
                 last_name=request.form.get('last_name'),
                 phone_number=request.form.get('phone_number'),
+                email=request.form.get('email'),
                 id_number=request.form.get('id_number'),
                 date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d') if request.form.get('date_of_birth') else None,
                 gender=request.form.get('gender'),
@@ -258,6 +274,7 @@ def add_patient():
 def appointments():
     page = request.args.get('page', 1, type=int)
     date_filter = request.args.get('date', '')
+    status_filter = request.args.get('status', '')
     
     query = Appointment.query
     
@@ -268,13 +285,66 @@ def appointments():
         except ValueError:
             pass
     
+    if status_filter:
+        query = query.filter(Appointment.status == status_filter)
+    
     appointments = query.order_by(Appointment.appointment_date.desc(), Appointment.appointment_time.desc()).paginate(
         page=page, per_page=15, error_out=False
     )
     
-    return render_template('appointments.html', appointments=appointments, date_filter=date_filter)
+    return render_template('appointments.html', 
+                         appointments=appointments,
+                         date_filter=date_filter,
+                         status_filter=status_filter)
 
-# Add error handler
+@app.route('/add_appointment', methods=['GET', 'POST'])
+@login_required
+def add_appointment():
+    if request.method == 'POST':
+        try:
+            appointment = Appointment(
+                patient_id=request.form.get('patient_id'),
+                appointment_date=datetime.strptime(request.form.get('appointment_date'), '%Y-%m-%d').date(),
+                appointment_time=request.form.get('appointment_time'),
+                reason=request.form.get('reason'),
+                notes=request.form.get('notes'),
+                language=request.form.get('language', 'english')
+            )
+            
+            db.session.add(appointment)
+            db.session.commit()
+            flash('Appointment scheduled successfully!', 'success')
+            return redirect(url_for('appointments'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error scheduling appointment: {str(e)}', 'error')
+    
+    patients = Patient.query.all()
+    return render_template('add_appointment.html', patients=patients)
+
+# WhatsApp webhook endpoint (placeholder)
+@app.route('/whatsapp', methods=['POST'])
+def whatsapp_webhook():
+    # This would handle incoming WhatsApp messages
+    # Implementation depends on your Twilio setup
+    return jsonify({'status': 'success'})
+
+# API endpoints for statistics
+@app.route('/api/stats')
+@login_required
+def api_stats():
+    stats = {
+        'total_patients': Patient.query.count(),
+        'today_appointments': Appointment.query.filter(
+            Appointment.appointment_date == datetime.today().date()
+        ).count(),
+        'whatsapp_bookings': Appointment.query.filter_by(source='whatsapp').count(),
+        'languages_used': db.session.query(Appointment.language).distinct().count()
+    }
+    return jsonify(stats)
+
+# Add error handlers
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('error.html', error=error), 404
@@ -284,93 +354,6 @@ def internal_error(error):
     db.session.rollback()
     return render_template('error.html', error=error), 500
 
-@app.route('/patients')
-@login_required
-def patients():
-    search = request.args.get('search', '')
-    if search:
-        patients = Patient.query.filter(
-            (Patient.first_name.ilike(f'%{search}%')) |
-            (Patient.last_name.ilike(f'%{search}%')) |
-            (Patient.patient_id.ilike(f'%{search}%')) |
-            (Patient.phone_number.ilike(f'%{search}%'))
-        ).all()
-    else:
-        patients = Patient.query.all()
-    
-    return render_template('patients.html', patients=patients, search=search)
-
-@app.route('/patient/<int:patient_id>')
-@login_required
-def patient_detail(patient_id):
-    patient = Patient.query.get_or_404(patient_id)
-    appointments = Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.appointment_date.desc()).all()
-    visits = PatientVisit.query.filter_by(patient_id=patient_id).order_by(PatientVisit.visit_date.desc()).all()
-    medical_history = MedicalHistory.query.filter_by(patient_id=patient_id).all()
-    
-    return render_template('patient_detail.html', 
-                         patient=patient, 
-                         appointments=appointments,
-                         visits=visits,
-                         medical_history=medical_history)
-
-@app.route('/add_patient', methods=['GET', 'POST'])
-@login_required
-def add_patient():
-    if request.method == 'POST':
-        # Generate patient ID
-        last_patient = Patient.query.order_by(Patient.id.desc()).first()
-        new_id = f"PAT{datetime.now().strftime('%Y%m')}{str(last_patient.id + 1 if last_patient else 1).zfill(4)}"
-        
-        patient = Patient(
-            patient_id=new_id,
-            first_name=request.form['first_name'],
-            last_name=request.form['last_name'],
-            phone_number=request.form['phone_number'],
-            email=request.form.get('email'),
-            date_of_birth=datetime.strptime(request.form['date_of_birth'], '%Y-%m-%d') if request.form.get('date_of_birth') else None,
-            gender=request.form.get('gender'),
-            address=request.form.get('address'),
-            emergency_contact=request.form.get('emergency_contact'),
-            medical_aid=request.form.get('medical_aid'),
-            medical_aid_number=request.form.get('medical_aid_number')
-        )
-        
-        db.session.add(patient)
-        db.session.commit()
-        flash('Patient added successfully!')
-        return redirect(url_for('patients'))
-    
-    return render_template('add_patient.html')
-
-@app.route('/appointments')
-@login_required
-def appointments():
-    date_filter = request.args.get('date', '')
-    status_filter = request.args.get('status', '')
-    
-    query = Appointment.query
-    
-    if date_filter:
-        query = query.filter(Appointment.appointment_date == datetime.strptime(date_filter, '%Y-%m-%d').date())
-    
-    if status_filter:
-        query = query.filter(Appointment.status == status_filter)
-    
-    appointments = query.order_by(Appointment.appointment_date.asc()).all()
-    
-    return render_template('appointments.html', 
-                         appointments=appointments,
-                         date_filter=date_filter,
-                         status_filter=status_filter)
-
-# WhatsApp webhook endpoint (placeholder)
-@app.route('/whatsapp', methods=['POST'])
-def whatsapp_webhook():
-    # This would handle incoming WhatsApp messages
-    # Implementation depends on your Twilio setup
-    return jsonify({'status': 'success'})
-
 # Initialize database
 def init_db():
     with app.app_context():
@@ -378,18 +361,28 @@ def init_db():
         
         # Create default admin user if not exists
         if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', role='admin')
+            admin = User(
+                username='admin', 
+                role='admin',
+                full_name='System Administrator'
+            )
             admin.set_password('admin123')
             db.session.add(admin)
         
         # Create default reception user if not exists
         if not User.query.filter_by(username='reception').first():
-            reception = User(username='reception', role='receptionist')
+            reception = User(
+                username='reception', 
+                role='receptionist',
+                full_name='Reception Staff'
+            )
             reception.set_password('reception123')
             db.session.add(reception)
         
         db.session.commit()
+        print("Database initialized successfully!")
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
