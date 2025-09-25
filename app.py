@@ -637,7 +637,11 @@ def whatsapp_webhook():
         logger.error(f"WhatsApp webhook error: {str(e)}")
         # Fallback response
         return '<Response><Message>🚨 System temporarily unavailable. Please try again in a few moments.</Message></Response>'
-
+@app.context_processor
+def inject_defaults():
+    """Inject default variables into all templates"""
+    return dict(patient=None)
+    
 # Routes
 @app.route('/')
 def index():
