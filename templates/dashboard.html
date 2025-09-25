@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Dashboard Header -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-900">Clinic Dashboard</h1>
+        <p class="text-gray-600">Welcome back! Here's today's overview.</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="stat-card text-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-white bg-opacity-20 mr-4">
+                    <i class="fas fa-users text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm opacity-90">Total Patients</p>
+                    <p class="text-3xl font-bold">{{ stats.total_patients }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                    <i class="fas fa-calendar-check text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Today's Appointments</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.today_appointments }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                    <i class="fas fa-stethoscope text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Today's Visits</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.today_visits }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4">
+                    <i class="fas fa-bell text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Pending Follow-ups</p>
+                    <p class="text-3xl font-bold text-gray-900">{{ stats.pending_followups }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Today's Appointments</h2>
+            <div class="space-y-3">
+                {% for appointment in todays_appointments %}
+                <div class="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                        <p class="font-semibold">{{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</p>
+                        <p class="text-sm text-gray-600">{{ appointment.appointment_time }} • {{ appointment.purpose or 'Check-up' }}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-xs 
+                        {% if appointment.status == 'confirmed' %}bg-green-100 text-green-800
+                        {% elif appointment.status == 'scheduled' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ appointment.status }}
+                    </span>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">No appointments scheduled for today</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Patients -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Patients</h2>
+            <div class="space-y-3">
+                {% for patient in recent_patients %}
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" 
+                   class="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition duration-200">
+                    <div>
+                        <p class="font-semibold">{{ patient.first_name }} {{ patient.last_name }}</p>
+                        <p class="text-sm text-gray-600">ID: {{ patient.patient_id }} • {{ patient.phone_number }}</p>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{{ url_for('add_patient') }}" 
+               class="flex items-center justify-center p-4 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition duration-200">
+                <i class="fas fa-user-plus text-blue-600 mr-2"></i>
+                <span class="font-semibold text-blue-600">Add New Patient</span>
+            </a>
+            <a href="{{ url_for('appointments') }}" 
+               class="flex items-center justify-center p-4 border-2 border-dashed border-green-300 rounded-lg hover:bg-green-50 transition duration-200">
+                <i class="fas fa-calendar-alt text-green-600 mr-2"></i>
+                <span class="font-semibold text-green-600">View Appointments</span>
+            </a>
+            <a href="{{ url_for('patients') }}" 
+               class="flex items-center justify-center p-4 border-2 border-dashed border-purple-300 rounded-lg hover:bg-purple-50 transition duration-200">
+                <i class="fas fa-search text-purple-600 mr-2"></i>
+                <span class="font-semibold text-purple-600">Search Patients</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
