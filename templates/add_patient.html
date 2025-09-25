@@ -1,95 +1,165 @@
 {% extends "base.html" %}
 
+{% block title %}Add New Patient - MetaWell AI Clinic{% endblock %}
+
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h1 class="text-2xl font-bold text-gray-900 mb-6">Register New Patient</h1>
-        
-        <form method="POST" class="space-y-6">
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4">
+            <i class="fas fa-user-plus mr-3"></i>Register New Patient
+        </h1>
+        <p class="text-lg text-gray-600">Add a new patient to the MetaWell AI Clinic system</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+        <form method="POST" class="space-y-8">
             <!-- Personal Information -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
-                    <input type="text" name="first_name" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="first_name" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-user mr-2 text-primary"></i>First Name *
+                    </label>
+                    <input type="text" id="first_name" name="first_name" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
                 </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
-                    <input type="text" name="last_name" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="last_name" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-user mr-2 text-primary"></i>Last Name *
+                    </label>
+                    <input type="text" id="last_name" name="last_name" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Contact Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ID Number *</label>
-                    <input type="text" name="id_number" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="phone_number" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-phone mr-2 text-primary"></i>Phone Number *
+                    </label>
+                    <input type="tel" id="phone_number" name="phone_number" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
                 </div>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                    <input type="tel" name="phone_number" required 
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label for="email" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-envelope mr-2 text-primary"></i>Email Address
+                    </label>
+                    <input type="email" id="email" name="email"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
                 </div>
             </div>
 
-            <!-- Medical Information -->
-            <div class="border-t pt-6">
-                <h2 class="text-lg font-bold text-gray-900 mb-4">Medical Information</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Blood Type</label>
-                        <select name="blood_type" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select blood type</option>
-                            <option value="A+">A+</option>
-                            <option value="A-">A-</option>
-                            <option value="B+">B+</option>
-                            <option value="B-">B-</option>
-                            <option value="AB+">AB+</option>
-                            <option value="AB-">AB-</option>
-                            <option value="O+">O+</option>
-                            <option value="O-">O-</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Known Allergies</label>
-                        <input type="text" name="allergies" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-                
+            <!-- ID Number with Auto Date of Birth -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Chronic Conditions</label>
-                    <textarea name="chronic_conditions" rows="2" 
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label for="id_number" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-id-card mr-2 text-primary"></i>ID Number
+                    </label>
+                    <input type="text" id="id_number" name="id_number" 
+                           pattern="[0-9]{13}" title="13-digit South African ID number"
+                           onblur="calculateDOBAndGender(this.value)"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
+                    <p class="text-xs text-gray-500 mt-2">13-digit SA ID number (auto-calculates DOB & Gender)</p>
+                </div>
+
+                <div>
+                    <label for="date_of_birth" class="block text-sm font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-birthday-cake mr-2 text-primary"></i>Date of Birth
+                    </label>
+                    <input type="date" id="date_of_birth" name="date_of_birth"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300">
                 </div>
             </div>
 
-            <!-- Emergency Contact -->
-            <div class="border-t pt-6">
-                <h2 class="text-lg font-bold text-gray-900 mb-4">Emergency Contact</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name</label>
-                        <input type="text" name="emergency_name" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Number</label>
-                        <input type="tel" name="emergency_contact" 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
+            <!-- Gender Selection -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-3">
+                    <i class="fas fa-venus-mars mr-2 text-primary"></i>Gender
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <label class="flex items-center p-4 border border-gray-300 rounded-xl hover:border-primary transition-all duration-300 cursor-pointer">
+                        <input type="radio" name="gender" value="male" class="mr-3 text-primary">
+                        <span class="flex items-center">
+                            <i class="fas fa-mars mr-2 text-blue-500"></i>Male
+                        </span>
+                    </label>
+                    <label class="flex items-center p-4 border border-gray-300 rounded-xl hover:border-primary transition-all duration-300 cursor-pointer">
+                        <input type="radio" name="gender" value="female" class="mr-3 text-primary">
+                        <span class="flex items-center">
+                            <i class="fas fa-venus mr-2 text-pink-500"></i>Female
+                        </span>
+                    </label>
+                    <label class="flex items-center p-4 border border-gray-300 rounded-xl hover:border-primary transition-all duration-300 cursor-pointer">
+                        <input type="radio" name="gender" value="other" class="mr-3 text-primary">
+                        <span class="flex items-center">
+                            <i class="fas fa-transgender mr-2 text-purple-500"></i>Prefer not to say
+                        </span>
+                    </label>
                 </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="border-t pt-6">
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4 pt-8 border-t border-gray-200">
+                <a href="{{ url_for('patients') }}" 
+                   class="px-8 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-semibold">
+                    <i class="fas fa-times mr-2"></i>Cancel
+                </a>
                 <button type="submit" 
-                        class="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-4 rounded-lg font-semibold hover:shadow-lg transition duration-200">
+                        class="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl">
                     <i class="fas fa-save mr-2"></i>Register Patient
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    function calculateDOBAndGender(idNumber) {
+        if (idNumber.length === 13) {
+            // Extract date parts from ID number (YYMMDD format)
+            const year = idNumber.substring(0, 2);
+            const month = idNumber.substring(2, 4);
+            const day = idNumber.substring(4, 6);
+            
+            // Determine century (00-21: 2000s, 22-99: 1900s)
+            const currentYear = new Date().getFullYear() % 100;
+            const century = parseInt(year) <= currentYear ? 2000 : 1900;
+            const fullYear = century + parseInt(year);
+            
+            // Set date of birth
+            const dobInput = document.getElementById('date_of_birth');
+            dobInput.value = `${fullYear}-${month}-${day}`;
+            
+            // Determine gender from 7th digit (0-4: female, 5-9: male)
+            const genderDigit = parseInt(idNumber.substring(6, 7));
+            const gender = genderDigit < 5 ? 'female' : 'male';
+            
+            // Set gender radio button
+            document.querySelector(`input[name="gender"][value="${gender}"]`).checked = true;
+            
+            // Show success message
+            showNotification('DOB and Gender auto-filled from ID number!', 'success');
+        }
+    }
+    
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 p-4 rounded-xl text-white font-semibold z-50 animate-fade-in ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle mr-2"></i>
+                ${message}
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
 {% endblock %}
