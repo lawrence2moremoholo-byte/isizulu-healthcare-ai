@@ -50,17 +50,17 @@
 
 <!-- Example in add_patient.html, edit_patient.html, etc. -->
 <select id="language_preference" name="language_preference" class="w-full px-4 py-3 border border-gray-300 rounded-xl">
-    <option value="english" {% if patient.language_preference == 'english' %}selected{% endif %}>English</option>
-    <option value="zulu" {% if patient.language_preference == 'zulu' %}selected{% endif %}>isiZulu</option>
-    <option value="xhosa" {% if patient.language_preference == 'xhosa' %}selected{% endif %}>isiXhosa</option>
-    <option value="afrikaans" {% if patient.language_preference == 'afrikaans' %}selected{% endif %}>Afrikaans</option>
-    <option value="sotho" {% if patient.language_preference == 'sotho' %}selected{% endif %}>Sesotho</option>
-    <option value="tswana" {% if patient.language_preference == 'tswana' %}selected{% endif %}>Setswana</option>
-    <option value="tsonga" {% if patient.language_preference == 'tsonga' %}selected{% endif %}>Xitsonga</option>
-    <option value="swati" {% if patient.language_preference == 'swati' %}selected{% endif %}>siSwati</option>
-    <option value="venda" {% if patient.language_preference == 'venda' %}selected{% endif %}>Tshivenda</option>
-    <option value="ndebele" {% if patient.language_preference == 'ndebele' %}selected{% endif %}>isiNdebele</option>
-    <option value="pedi" {% if patient.language_preference == 'pedi' %}selected{% endif %}>Sepedi</option>
+    <option value="english" {% if patient is defined and patient.language_preference == 'english' %}selected{% endif %}>English</option>
+    <<option value="zulu" {% if patient is defined and patient.language_preference == 'zulu' %}selected{% endif %}>Zulu</option>
+    <option value="xhosa" {% if patient is defined and patient.language_preference == 'xhosa' %}selected{% endif %}>Xhosa</option>
+    <option value="afrikaans" {% if patient is defined and patient.language_preference == 'afrikaans' %}selected{% endif %}>Afrikaans</option>
+    <option value="sotho" {% if patient is defined and patient.language_preference == 'sotho' %}selected{% endif %}>Sotho</option>
+    <option value="tswana" {% if patient is defined and patient.language_preference == 'tswana' %}selected{% endif %}>Tswana</option>
+    <option value="tsonga" {% if patient is defined and patient.language_preference == 'tsonga' %}selected{% endif %}>Tsonga</option>
+    <option value="swati" {% if patient is defined and patient.language_preference == 'swati' %}selected{% endif %}>seSwati</option>
+    <option value="venda" {% if patient is defined and patient.language_preference == 'venda' %}selected{% endif %}>Venda</option>
+    <option value="ndebele" {% if patient is defined and patient.language_preference == 'ndebele' %}selected{% endif %}>Ndebele</option>
+    <option value="pedi" {% if patient is defined and patient.language_preference == 'pedi' %}selected{% endif %}>Sepedi</option>
 </select>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 min-h-screen">
