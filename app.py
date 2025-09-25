@@ -663,7 +663,8 @@ def login():
         else:
             flash('Invalid username or password', 'error')
     
-    return render_template('login.html')
+    # Pass a default patient variable to avoid template errors
+    return render_template('login.html', patient=None)
 
 @app.route('/dashboard')
 @login_required
