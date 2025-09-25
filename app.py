@@ -225,20 +225,26 @@ def dashboard():
 @login_required
 def patients():
     search = request.args.get('search', '')
+    source = request.args.get('source', '')
     page = request.args.get('page', 1, type=int)
     
+    query = Patient.query
+    
+    if source:
+        query = query.filter_by(source=source)
+    
     if search:
-        patients = Patient.query.filter(
+        query = query.filter(
             (Patient.first_name.contains(search)) |
             (Patient.last_name.contains(search)) |
             (Patient.patient_id.contains(search)) |
             (Patient.id_number.contains(search)) |
             (Patient.phone_number.contains(search))
-        ).order_by(Patient.last_name).paginate(page=page, per_page=20, error_out=False)
-    else:
-        patients = Patient.query.order_by(Patient.last_name).paginate(page=page, per_page=20, error_out=False)
+        )
     
-    return render_template('patients.html', patients=patients, search=search)
+    patients = query.order_by(Patient.last_name).paginate(page=page, per_page=20, error_out=False)
+    
+    return render_template('patients.html', patients=patients, search=search, source=source)
 
 @app.route('/patient/<int:patient_id>')
 @login_required
