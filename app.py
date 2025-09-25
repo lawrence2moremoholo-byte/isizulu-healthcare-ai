@@ -111,19 +111,67 @@ class MedicalHistory(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Language support
+# Complete 11 Official South African Languages
 LANGUAGES = {
-    'english': {'name': 'English', 'greeting': 'Hello'},
-    'zulu': {'name': 'isiZulu', 'greeting': 'Sawubona'},
-    'afrikaans': {'name': 'Afrikaans', 'greeting': 'Hallo'},
-    'xhosa': {'name': 'isiXhosa', 'greeting': 'Molo'},
-    'sotho': {'name': 'Sesotho', 'greeting': 'Lumela'},
-    'tswana': {'name': 'Setswana', 'greeting': 'Dumela'},
-    'tsonga': {'name': 'Xitsonga', 'greeting': 'Avuxeni'},
-    'swati': {'name': 'siSwati', 'greeting': 'Sawubona'},
-    'venda': {'name': 'Tshivenda', 'greeting': 'Ndaa'},
-    'ndebele': {'name': 'isiNdebele', 'greeting': 'Lotjhani'},
-    'pedi': {'name': 'Sepedi', 'greeting': 'Dumela'}
+    'english': {'name': 'English', 'greeting': 'Hello', 'code': 'en'},
+    'zulu': {'name': 'isiZulu', 'greeting': 'Sawubona', 'code': 'zu'},
+    'xhosa': {'name': 'isiXhosa', 'greeting': 'Molo', 'code': 'xh'},
+    'afrikaans': {'name': 'Afrikaans', 'greeting': 'Hallo', 'code': 'af'},
+    'sotho': {'name': 'Sesotho', 'greeting': 'Lumela', 'code': 'st'},
+    'tswana': {'name': 'Setswana', 'greeting': 'Dumela', 'code': 'tn'},
+    'tsonga': {'name': 'Xitsonga', 'greeting': 'Avuxeni', 'code': 'ts'},
+    'swati': {'name': 'siSwati', 'greeting': 'Sawubona', 'code': 'ss'},
+    'venda': {'name': 'Tshivenda', 'greeting': 'Ndaa', 'code': 've'},
+    'ndebele': {'name': 'isiNdebele', 'greeting': 'Lotjhani', 'code': 'nr'},
+    'pedi': {'name': 'Sepedi', 'greeting': 'Dumela', 'code': 'nso'}
+}
+
+# Day names in all 11 languages
+LANGUAGE_DAYS = {
+    'english': {
+        'Monday': 'Monday', 'Tuesday': 'Tuesday', 'Wednesday': 'Wednesday',
+        'Thursday': 'Thursday', 'Friday': 'Friday', 'Saturday': 'Saturday', 'Sunday': 'Sunday'
+    },
+    'zulu': {
+        'Monday': 'Msombuluko', 'Tuesday': 'Lwesibili', 'Wednesday': 'Lwesithathu',
+        'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Sonto'
+    },
+    'xhosa': {
+        'Monday': 'Mvulo', 'Tuesday': 'Lwesibini', 'Wednesday': 'Lwesithathu',
+        'Thursday': 'Lwesine', 'Friday': 'Lwesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'Cawa'
+    },
+    'afrikaans': {
+        'Monday': 'Maandag', 'Tuesday': 'Dinsdag', 'Wednesday': 'Woensdag',
+        'Thursday': 'Donderdag', 'Friday': 'Vrydag', 'Saturday': 'Saterdag', 'Sunday': 'Sondag'
+    },
+    'sotho': {
+        'Monday': 'Mantaha', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+        'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Moqebelo', 'Sunday': 'Sontaha'
+    },
+    'tswana': {
+        'Monday': 'Mosupologo', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+        'Thursday': 'Labone', 'Friday': 'Labotlhano', 'Saturday': 'Lamatlhatso', 'Sunday': 'Tshipi'
+    },
+    'tsonga': {
+        'Monday': 'Musumbhunuku', 'Tuesday': 'Ravumbirhi', 'Wednesday': 'Ravurharhu',
+        'Thursday': 'Ravumune', 'Friday': 'Ravuntlhanu', 'Saturday': 'Mugqivela', 'Sunday': 'Sonto'
+    },
+    'swati': {
+        'Monday': 'Msombuluko', 'Tuesday': 'Lesibili', 'Wednesday': 'Lesitsatfu',
+        'Thursday': 'Lesine', 'Friday': 'Lesihlanu', 'Saturday': 'Mgcibelo', 'Sunday': 'Lisontfo'
+    },
+    'venda': {
+        'Monday': 'Musumbuluwo', 'Tuesday': 'Ḽavhuvhili', 'Wednesday': 'Ḽavhuraru',
+        'Thursday': 'Ḽavhuṋa', 'Friday': 'Ḽavhuṱanu', 'Saturday': 'Mugivhela', 'Sunday': 'Swondaha'
+    },
+    'ndebele': {
+        'Monday': 'Mvulo', 'Tuesday': 'Lesibili', 'Wednesday': 'Lesithathu',
+        'Thursday': 'Lesine', 'Friday': 'Lesihlanu', 'Saturday': 'Mgqibelo', 'Sunday': 'iCawa'
+    },
+    'pedi': {
+        'Monday': 'Mošupšũng', 'Tuesday': 'Labobedi', 'Wednesday': 'Laboraro',
+        'Thursday': 'Labone', 'Friday': 'Labohlano', 'Saturday': 'Mokibelo', 'Sunday': 'Sontaga'
+    }
 }
 
 # Initialize database function
@@ -180,38 +228,102 @@ whatsapp_conversations = {}
 # Multilingual Responses Configuration
 WHATSAPP_RESPONSES = {
     'english': {
-        'welcome': "🏥 *MetaWell AI Clinic*\n\nPlease choose your language:\n\n1. English\n2. isiZulu\n3. Afrikaans\n4. isiXhosa\n\n*Reply with the number* of your preferred language",
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nPlease choose your language:\n\n1. English\n2. isiZulu\n3. isiXhosa\n4. Afrikaans\n5. Sesotho\n6. Setswana\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Reply with the number* of your preferred language",
         'greeting': "Hello! 👋 Thank you for contacting MetaWell AI Clinic. Would you like to book a medical appointment? (Reply *YES* or *NO*)",
         'show_days': "📅 *Available Appointment Days:*\n\n{days}\n\nWhich day would you prefer? (Reply with the day name)",
         'choose_day': "Great! You chose *{day}*. Checking available time slots...",
         'show_slots': "⏰ *Available Times on {day}:*\n\n{slots}\n\nPlease reply with your preferred time (e.g., 09:00)",
-        'booking_success': "✅ *Appointment Confirmed!*\n\n📅 Date: {day}\n⏰ Time: {time}\n📍 Clinic: MetaWell AI Clinic\n📋 Purpose: General Consultation\n\nPlease arrive 15 minutes early with your ID document. We look forward to seeing you!",
-        'emergency_advice': "🚨 *Emergency Notice:*\n\nIf this is a medical emergency, please:\n• Visit your nearest hospital immediately\n• Call 10111 for ambulance\n• Go to the emergency room\n\n*Your safety is our priority!*",
-        'after_hours': "🏥 *MetaWell AI Clinic - After Hours*\n\nThank you for your message! Our clinic is currently closed.\n\n*Clinic Hours:*\n🕘 Monday-Friday: 6:00 AM - 9:00 PM\n🕘 Saturday: 8:00 AM - 5:00 PM\n❌ Sunday: Closed\n\nWe'll respond to your message during our next business hours.",
-        'goodbye': "Thank you for contacting MetaWell AI Clinic! Stay healthy! 🌟",
-        'invalid_choice': "❌ I didn't understand that. Please try again with a valid option.",
-        'yes': ['yes', 'y', 'yeah', 'yebo', 'ya'],
-        'no': ['no', 'n', 'nah', 'cha']
+        'booking_success': "✅ *Appointment Confirmed!*\n\n📅 Date: {day}\n⏰ Time: {time}\n📍 Clinic: MetaWell AI Clinic\n📋 Purpose: General Consultation\n\nPlease arrive 15 minutes early with your ID document.",
+        'after_hours': "🏥 *After Hours*\n\nClinic closed (6AM-9PM). We'll respond tomorrow.",
+        'goodbye': "Thank you! Stay healthy! 🌟",
+        'invalid_choice': "❌ Invalid choice. Please try again.",
+        'yes': ['yes', 'y', 'yeah', 'ya'],
+        'no': ['no', 'n', 'nah']
     },
     'zulu': {
-        'welcome': "🏥 *MetaWell AI Clinic*\n\nSicela ukhethe ulimi:\n\n1. isiZulu\n2. English\n3. Afrikaans\n4. isiXhosa\n\n*Phendula ngenombolo* yolimi oluthandayo",
-        'greeting': "Sawubona! 👋 Ngiyabonga ukuxhumana ne-MetaWell AI Clinic. Ingabe ufuna ukubhuka isikhathi sokwelapha? (Phendula *YEBO* noma *CHA*)",
-        'show_days': "📅 *Izinsuku Ezitholakalayo:*\n\n{days}\n\nUfuna usuku luni? (Phendula ngeligama lousuku)",
-        'choose_day': "Kuhle! Ukhethe u-*{day}*. Ngibheka izikhathi ezitholakalayo...",
-        'show_slots': "⏰ *Izikhathi ku-{day}:*\n\n{slots}\n\nSicela uphendule ngesikhathi osithandayo (isib. 09:00)",
-        'booking_success': "✅ *Isikhathi Siqinisekisiwe!*\n\n📅 Usuku: {day}\n⏰ Isikhathi: {time}\n📍 Isibhedlela: MetaWell AI Clinic\n📋 Inhloso: Ukuxilongwa Okujwayelekile\n\nSicela ufike imizuzu engu-15 ngaphambi kwesikhathi. Siyakulindile!",
-        'goodbye': "Ngiyabonga ukuxhumana ne-MetaWell AI Clinic! Sala uphile! 🌟",
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nSicela ukhethe ulimi:\n\n1. isiZulu\n2. English\n3. isiXhosa\n4. Afrikaans\n5. Sesotho\n6. Setswana\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Phendula ngenombolo* yolimi oluthandayo",
+        'greeting': "Sawubona! 👋 Ingabe ufuna ukubhuka isikhathi sokwelapha? (Phendula *YEBO* noma *CHA*)",
+        'show_days': "📅 *Izinsuku Ezitholakalayo:*\n\n{days}\n\nUfuna usuku luni?",
+        'choose_day': "Kuhle! Ukhethe u-*{day}*. Ngibheka izikhathi...",
+        'show_slots': "⏰ *Izikhathi ku-{day}:*\n\n{slots}\n\nKhetha isikhathi osithandayo",
+        'booking_success': "✅ *Isikhathi Siqinisekisiwe!*\n\n📅 Usuku: {day}\n⏰ Isikhathi: {time}\n📍 Isibhedlela: MetaWell AI Clinic\n\nSicela ufike imizuzu engu-15 ngaphambi kwesikhathi.",
+        'goodbye': "Ngiyabonga! Sala uphile! 🌟",
         'yes': ['yebo', 'y', 'ya'],
         'no': ['cha', 'c', 'hayi']
     },
+    'xhosa': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKhetha ulwimi:\n\n1. isiXhosa\n2. English\n3. isiZulu\n4. Afrikaans\n5. Sesotho\n6. Setswana\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Phendula ngenombolo* yolwimi oluyintandokazi",
+        'greeting': "Molo! 👋 Ingaba ufuna ukubhukha i-appointment? (Phendula *EWE* okanye *HAYI*)",
+        'show_days': "📅 *Iintsuku Ezikhoyo:*\n\n{days}\n\nIphi intsuku oyithandayo?",
+        'booking_success': "✅ *I-Appointment Iqinisekisiwe!*\n\n📅 Usuku: {day}\n⏰ Ixesha: {time}\n\nFika imizuzu eyi-15 phambili.",
+        'goodbye': "Enkosi! Hlala uphilile! 🌟",
+        'yes': ['ewe', 'e', 'y'],
+        'no': ['hayi', 'h', 'no']
+    },
     'afrikaans': {
-        'welcome': "🏥 *MetaWell AI Clinic*\n\nKies asseblief jou taal:\n\n1. Afrikaans\n2. English\n3. isiZulu\n4. isiXhosa\n\n*Antwoord met die nommer* van jou voorkeurtaal",
-        'greeting': "Hallo! 👋 Dankie dat jy MetaWell AI Clinic gekontak het. Wil jy 'n afspraak maak? (Antwoord *JA* of *NEE*)",
-        'show_days': "📅 *Beskikbare Afspraakdae:*\n\n{days}\n\nWatter dag verkies jy? (Antwoord met die dag naam)",
-        'booking_success': "✅ *Afspraak Bevestig!*\n\n📅 Datum: {day}\n⏰ Tyd: {time}\n📍 Kliniek: MetaWell AI Clinic\n\nWees asseblief 15 minute vroeg met jou ID-dokument.",
-        'goodbye': "Dankie vir die kontak! Bly gesond! 🌟",
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKies jou taal:\n\n1. Afrikaans\n2. English\n3. isiZulu\n4. isiXhosa\n5. Sesotho\n6. Setswana\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Antwoord met die nommer* van jou taal",
+        'greeting': "Hallo! 👋 Wil jy 'n afspraak maak? (Antwoord *JA* of *NEE*)",
+        'show_days': "📅 *Beskikbare Dae:*\n\n{days}\n\nWatter dag verkies jy?",
+        'booking_success': "✅ *Afspraak Bevestig!*\n\n📅 Datum: {day}\n⏰ Tyd: {time}\n\nWees 15 minute vroeg.",
+        'goodbye': "Dankie! Bly gesond! 🌟",
         'yes': ['ja', 'j', 'y'],
         'no': ['nee', 'n', 'ne']
+    },
+    'sotho': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKhetha puo:\n\n1. Sesotho\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Setswana\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Arabela ka nomoro* ea puo eo u e ratang",
+        'greeting': "Lumela! 👋 Na u batla ho beha kopano? (Arabela *EE* kapa *TJHE*)",
+        'booking_success': "✅ *Kopano E Netefalitsoe!*\n\n📅 Letsatsi: {day}\n⏰ Nako: {time}",
+        'goodbye': "Kea leboha! Sala hantle! 🌟",
+        'yes': ['ee', 'e', 'y'],
+        'no': ['tjhe', 't', 'che']
+    },
+    'tswana': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nTlhopha puo:\n\n1. Setswana\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Xitsonga\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Araba ka nomoro* ya puo o e ratang",
+        'greeting': "Dumela! 👋 A o batla go beakanya appointment? (Araba *EE* kgotsa *NNYAA*)",
+        'booking_success': "✅ *Appointment E Tshepiditswe!*\n\n📅 Letsatsi: {day}\n⏰ Nakô: {time}",
+        'goodbye': "Ke a leboga! Sala sentle! 🌟",
+        'yes': ['ee', 'e', 'y'],
+        'no': ['nnya', 'n', 'nyaa']
+    },
+    'tsonga': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nHlawula ririmi:\n\n1. Xitsonga\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Setswana\n8. siSwati\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Phendula hi nomoro* ya ririmi lowu u funaka",
+        'greeting': "Avuxeni! 👋 Xana u lava ku endla appointment? (Phendula *INA* kumbe *E-E*)",
+        'booking_success': "✅ *Appointment Yi Titshike!*\n\n📅 Siku: {day}\n⏰ Nkarhi: {time}",
+        'goodbye': "Ndzi khense! Sala kahle! 🌟",
+        'yes': ['ina', 'i', 'y'],
+        'no': ['e-e', 'e', 'a-a']
+    },
+    'swati': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKhetsa lulwimi:\n\n1. siSwati\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Setswana\n8. Xitsonga\n9. Tshivenda\n10. isiNdebele\n11. Sepedi\n\n*Phendvula ngenombolo* yelulwimi lolutsandvako",
+        'greeting': "Sawubona! 👋 Ingabe ufuna kubuka sikhatsi? (Phendvula *YEBHO* nobe *CHA*)",
+        'booking_success': "✅ *Sikhatsi Sesincumo!*\n\n📅 Lilanga: {day}\n⏰ Sikhatsi: {time}",
+        'goodbye': "Ngiyabonga! Sala kahle! 🌟",
+        'yes': ['yebho', 'y', 'e'],
+        'no': ['cha', 'c', 'a']
+    },
+    'venda': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nṊanga luambo:\n\n1. Tshivenda\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Setswana\n8. Xitsonga\n9. siSwati\n10. isiNdebele\n11. Sepedi\n\n*Pendela nga nomoro* ya luambo lwawe",
+        'greeting': "Ndaa! 👋 Naa u funa u ita appointment? (Pendela *EE* kana *AAI*)",
+        'booking_success': "✅ *Appointment Yo Tendelwa!*\n\n📅 Ḓuvha: {day}\n⏰ Tshifhinga: {time}",
+        'goodbye': "Ndo livhuwa! Sala zwavhudi! 🌟",
+        'yes': ['ee', 'e', 'y'],
+        'no': ['aai', 'a', 'hai']
+    },
+    'ndebele': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKhetha ulimi:\n\n1. isiNdebele\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Setswana\n8. Xitsonga\n9. siSwati\n10. Tshivenda\n11. Sepedi\n\n*Phendula ngenombolo* yolimi owuthandayo",
+        'greeting': "Lotjhani! 👋 Ingabe ufuna ukubhuka isikhathi? (Phendula *YEBHO* noma *CHA*)",
+        'booking_success': "✅ *Isikhathi Siqinisekisiwe!*\n\n📅 Ilanga: {day}\n⏰ Isikhathi: {time}",
+        'goodbye': "Ngiyabonga! Sala kahle! 🌟",
+        'yes': ['yebho', 'y', 'e'],
+        'no': ['cha', 'c', 'a']
+    },
+    'pedi': {
+        'welcome': "🏥 *MetaWell AI Clinic*\n\nKgetha polelo:\n\n1. Sepedi\n2. English\n3. isiZulu\n4. isiXhosa\n5. Afrikaans\n6. Sesotho\n7. Setswana\n8. Xitsonga\n9. siSwati\n10. Tshivenda\n11. isiNdebele\n\n*Arabela ka nomoro* ya polelo yeo o e ratago",
+        'greeting': "Dumela! 👋 Na o nyaka go beakanya appointment? (Arabela *EE* kgotsa *TJWANA*)",
+        'booking_success': "✅ *Appointment E Tshepiditswe!*\n\n📅 Letšatši: {day}\n⏰ Nakong: {time}",
+        'goodbye': "Ke a leboga! Sala gabotse! 🌟",
+        'yes': ['ee', 'e', 'y'],
+        'no': ['tjwana', 't', 'nyaa']
     }
 }
 
