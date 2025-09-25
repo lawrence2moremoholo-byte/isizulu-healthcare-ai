@@ -472,12 +472,19 @@ def create_appointment_from_whatsapp(patient_id, day, time, language='english'):
     return appointment
 
 def handle_language_selection(message, state_data, phone_number):
-    """Handle language selection step"""
+    """Handle language selection step with 11 options"""
     language_choices = {
         '1': 'english', 'english': 'english',
         '2': 'zulu', 'zulu': 'zulu', 'isizulu': 'zulu',
-        '3': 'afrikaans', 'afrikaans': 'afrikaans',
-        '4': 'xhosa', 'xhosa': 'xhosa', 'isixhosa': 'xhosa'
+        '3': 'xhosa', 'xhosa': 'xhosa', 'isixhosa': 'xhosa',
+        '4': 'afrikaans', 'afrikaans': 'afrikaans',
+        '5': 'sotho', 'sotho': 'sotho', 'sesotho': 'sotho',
+        '6': 'tswana', 'tswana': 'tswana', 'setswana': 'tswana',
+        '7': 'tsonga', 'tsonga': 'tsonga', 'xitsonga': 'tsonga',
+        '8': 'swati', 'swati': 'swati', 'siswati': 'swati', 'siswati': 'swati',
+        '9': 'venda', 'venda': 'venda', 'tshivenda': 'venda',
+        '10': 'ndebele', 'ndebele': 'ndebele', 'isindebele': 'ndebele',
+        '11': 'pedi', 'pedi': 'pedi', 'sepedi': 'pedi'
     }
     
     if message.lower() in language_choices:
