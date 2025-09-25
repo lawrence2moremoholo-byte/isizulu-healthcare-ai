@@ -197,33 +197,59 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Dashboard statistics
-    total_patients = Patient.query.count()
-    today_appointments = Appointment.query.filter(
-        Appointment.appointment_date == datetime.today().date()
-    ).count()
-    upcoming_appointments = Appointment.query.filter(
-        Appointment.appointment_date >= datetime.today().date(),
-        Appointment.status.in_(['scheduled', 'confirmed'])
-    ).count()
-    
-    # Recent appointments
-    recent_appointments = Appointment.query.filter(
-        Appointment.appointment_date >= datetime.today().date()
-    ).order_by(Appointment.appointment_date.asc()).limit(10).all()
-    
-    # Language usage statistics
-    language_stats = db.session.query(
-        Appointment.language, 
-        func.count(Appointment.id)
-    ).group_by(Appointment.language).all()
-    
-    return render_template('dashboard.html',
-                         total_patients=total_patients,
-                         today_appointments=today_appointments,
-                         upcoming_appointments=upcoming_appointments,
-                         recent_appointments=recent_appointments,
-                         language_stats=language_stats)
+    try:
+        # Dashboard statistics
+        total_patients = Patient.query.count()
+        today_appointments = Appointment.query.filter(
+            Appointment.appointment_date == datetime.today().date()
+        ).count()
+        upcoming_appointments = Appointment.query.filter(
+            Appointment.appointment_date >= datetime.today().date(),
+            Appointment.status.in_(['scheduled', 'confirmed'])
+        ).count()
+        whatsapp_bookings = Appointment.query.filter_by(source='whatsapp').count()
+        today_visits = PatientVisit.query.filter(
+            db.func.date(PatientVisit.visit_date) == datetime.today().date()
+        ).count()
+        
+        # Recent appointments
+        recent_appointments = Appointment.query.filter(
+            Appointment.appointment_date >= datetime.today().date()
+        ).order_by(Appointment.appointment_date.asc()).limit(10).all()
+        
+        # Recent WhatsApp patients
+        recent_whatsapp = Patient.query.filter_by(source='whatsapp').order_by(Patient.created_at.desc()).limit(5).all()
+        
+        # Language usage statistics
+        language_stats = db.session.query(
+            Appointment.language, 
+            func.count(Appointment.id)
+        ).group_by(Appointment.language).all()
+        
+        # Create stats dictionary for template compatibility
+        stats = {
+            'total_patients': total_patients,
+            'today_appointments': today_appointments,
+            'upcoming_appointments': upcoming_appointments,
+            'whatsapp_bookings': whatsapp_bookings,
+            'today_visits': today_visits
+        }
+        
+        return render_template('dashboard.html',
+                             stats=stats,
+                             todays_appointments=recent_appointments,  # Fixed variable name
+                             recent_patients=Patient.query.order_by(Patient.created_at.desc()).limit(5).all(),
+                             recent_whatsapp=recent_whatsapp,
+                             today=datetime.today().date(),
+                             total_patients=total_patients,  # Keep individual variables for backward compatibility
+                             today_appointments=today_appointments,
+                             upcoming_appointments=upcoming_appointments,
+                             language_stats=language_stats)
+                             
+    except Exception as e:
+        logger.error(f"Dashboard error: {str(e)}", exc_info=True)
+        flash('Error loading dashboard. Please try again.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/logout')
 @login_required
