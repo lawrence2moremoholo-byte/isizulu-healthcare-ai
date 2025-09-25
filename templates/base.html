@@ -7,25 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .sidebar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #007bff, #0056b3);
-        }
+        .sidebar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     </style>
 </head>
 <body class="bg-gray-100">
     {% if current_user.is_authenticated %}
-    <!-- Navigation -->
     <nav class="bg-gradient-to-r from-blue-600 to-purple-700 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">🏥 MetaWell AI Clinic</h1>
             <div class="flex items-center space-x-4">
-                <span class="hidden md:inline">Welcome, {{ current_user.username }} ({{ current_user.role }})</span>
+                <span class="hidden md:inline">Welcome, {{ current_user.username }}</span>
                 <a href="{{ url_for('logout') }}" class="bg-blue-800 px-4 py-2 rounded-lg hover:bg-blue-900 transition duration-200">
                     <i class="fas fa-sign-out-alt mr-2"></i>Logout
                 </a>
@@ -34,7 +26,6 @@
     </nav>
 
     <div class="flex">
-        <!-- Sidebar -->
         <div class="sidebar w-64 min-h-screen text-white p-4 hidden md:block">
             <div class="space-y-2 mt-4">
                 <a href="{{ url_for('dashboard') }}" class="flex items-center p-3 rounded-lg hover:bg-blue-800 transition duration-200 {% if request.endpoint == 'dashboard' %}bg-blue-800{% endif %}">
@@ -52,32 +43,11 @@
             </div>
         </div>
 
-        <!-- Mobile menu button -->
-        <div class="md:hidden fixed bottom-4 right-4 z-50">
-            <button onclick="toggleMobileMenu()" class="bg-blue-600 text-white p-4 rounded-full shadow-lg">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-
-        <!-- Mobile menu -->
-        <div id="mobileMenu" class="fixed inset-0 bg-blue-600 z-40 hidden md:hidden">
-            <div class="p-4 space-y-4">
-                <button onclick="toggleMobileMenu()" class="text-white float-right">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-                <a href="{{ url_for('dashboard') }}" class="block text-white p-3 text-lg" onclick="toggleMobileMenu()">Dashboard</a>
-                <a href="{{ url_for('patients') }}" class="block text-white p-3 text-lg" onclick="toggleMobileMenu()">Patients</a>
-                <a href="{{ url_for('appointments') }}" class="block text-white p-3 text-lg" onclick="toggleMobileMenu()">Appointments</a>
-                <a href="{{ url_for('add_patient') }}" class="block text-white p-3 text-lg" onclick="toggleMobileMenu()">Add Patient</a>
-            </div>
-        </div>
-
-        <!-- Main content -->
         <div class="flex-1 p-4 md:p-6">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} mb-4 p-3 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        <div class="mb-4 p-3 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
                             {{ message }}
                         </div>
                     {% endfor %}
@@ -87,12 +57,6 @@
             {% block content %}{% endblock %}
         </div>
     </div>
-
-    <script>
-        function toggleMobileMenu() {
-            document.getElementById('mobileMenu').classList.toggle('hidden');
-        }
-    </script>
     {% else %}
         {% block login_content %}{% endblock %}
     {% endif %}
