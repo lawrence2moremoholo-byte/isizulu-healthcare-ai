@@ -38,7 +38,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='receptionist')  # admin, doctor, nurse, receptionist
+    role = db.Column(db.String(20), nullable=False, default='receptionist')
     full_name = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -80,7 +80,7 @@ class Appointment(db.Model):
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
     appointment_date = db.Column(db.Date, nullable=False)
     appointment_time = db.Column(db.String(10), nullable=False)
-    status = db.Column(db.String(20), default='scheduled')  # scheduled, confirmed, completed, cancelled
+    status = db.Column(db.String(20), default='scheduled')
     reason = db.Column(db.Text)
     notes = db.Column(db.Text)
     language = db.Column(db.String(20), default='english')
@@ -125,6 +125,47 @@ LANGUAGES = {
     'ndebele': {'name': 'isiNdebele', 'greeting': 'Lotjhani'},
     'pedi': {'name': 'Sepedi', 'greeting': 'Dumela'}
 }
+
+# Initialize database function
+def init_db():
+    """Initialize the database with required tables and default data"""
+    try:
+        with app.app_context():
+            # Create all tables
+            db.create_all()
+            logger.info("Database tables created successfully")
+            
+            # Create default admin user if not exists
+            if not User.query.filter_by(username='admin').first():
+                admin = User(
+                    username='admin', 
+                    role='admin',
+                    full_name='System Administrator'
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                logger.info("Default admin user created")
+            
+            # Create default reception user if not exists
+            if not User.query.filter_by(username='reception').first():
+                reception = User(
+                    username='reception', 
+                    role='receptionist',
+                    full_name='Reception Staff'
+                )
+                reception.set_password('reception123')
+                db.session.add(reception)
+                logger.info("Default reception user created")
+            
+            db.session.commit()
+            logger.info("Database initialized successfully!")
+            
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        raise
+
+# Initialize database immediately when app starts
+init_db()
 
 # Routes
 @app.route('/')
@@ -235,7 +276,8 @@ def add_patient():
             # Generate patient ID
             year = datetime.now().year
             last_patient = Patient.query.order_by(Patient.id.desc()).first()
-            new_id = f"MW{year}{str(last_patient.id + 1 if last_patient else 1).zfill(4)}"
+            last_id = last_patient.id if last_patient else 0
+            new_id = f"MW{year}{str(last_id + 1).zfill(4)}"
             
             patient = Patient(
                 patient_id=new_id,
@@ -288,7 +330,7 @@ def appointments():
     if status_filter:
         query = query.filter(Appointment.status == status_filter)
     
-    appointments = query.order_by(Appointment.appointment_date.desc(), Appointment.appointment_time.desc()).paginate(
+    appointments = query.order_by(Appointment.appointment_date.asc(), Appointment.appointment_time.asc()).paginate(
         page=page, per_page=15, error_out=False
     )
     
@@ -323,12 +365,24 @@ def add_appointment():
     patients = Patient.query.all()
     return render_template('add_appointment.html', patients=patients)
 
-# WhatsApp webhook endpoint (placeholder)
+# WhatsApp webhook endpoint
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp_webhook():
-    # This would handle incoming WhatsApp messages
-    # Implementation depends on your Twilio setup
-    return jsonify({'status': 'success'})
+    try:
+        # Basic WhatsApp webhook implementation
+        incoming_msg = request.values.get('Body', '').strip()
+        from_number = request.values.get('From', '').replace('whatsapp:', '')
+        
+        logger.info(f"WhatsApp message from {from_number}: {incoming_msg}")
+        
+        # Placeholder response
+        response = "Thank you for your message. Our clinic will respond shortly."
+        
+        return f'<Response><Message>{response}</Message></Response>'
+        
+    except Exception as e:
+        logger.error(f"WhatsApp webhook error: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # API endpoints for statistics
 @app.route('/api/stats')
@@ -354,35 +408,7 @@ def internal_error(error):
     db.session.rollback()
     return render_template('error.html', error=error), 500
 
-# Initialize database
-def init_db():
-    with app.app_context():
-        db.create_all()
-        
-        # Create default admin user if not exists
-        if not User.query.filter_by(username='admin').first():
-            admin = User(
-                username='admin', 
-                role='admin',
-                full_name='System Administrator'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-        
-        # Create default reception user if not exists
-        if not User.query.filter_by(username='reception').first():
-            reception = User(
-                username='reception', 
-                role='receptionist',
-                full_name='Reception Staff'
-            )
-            reception.set_password('reception123')
-            db.session.add(reception)
-        
-        db.session.commit()
-        print("Database initialized successfully!")
-
+# Application entry point
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
